@@ -1001,49 +1001,112 @@ function da_landing_shortcode($atts)
                 return col;
             }
 
-            // --- MODE 3: ZDZISLAW (Outward Spill + Warping) ---
+            // --- MODE 3: ZDZISLAW (Emanating Ooze + Eerie Morphs) ---
+            float smax(float a, float b, float k) {
+                return -smin(-a, -b, k);
+            }
+
             vec3 getZdzislaw(vec2 uv, float t) {
                 vec2 p = uv; 
-                p.x = abs(p.x); 
+                p.x = abs(p.x); // Symmetry
                 
-                // Warping Morph Factors
-                float m1 = sin(t * 0.5) * 0.1;
-                float m2 = cos(t * 0.3) * 0.15;
-                float m3 = sin(t * 0.7) * 0.1;
-                
-                // 1. The "Mask" (Morphing Beksiński structure)
-                float d = length(p - vec2(0.0, 0.15 + m1)) - (0.25 + m2); // Morphing Cranium
-                d = smin(d, length(p - vec2(0.35 + m1, -0.2)) - 0.15, 0.2); // Cheekbones
-                d = smin(d, length(p - vec2(0.0 + m3, -0.5 + m2)) - (0.1 + m1), 0.25); // Morphing Jaw
-                
-                d += fbm(p * 4.0 + t * 0.05) * 0.08; // Decay texture
+                // Time vars
+                float tMorph = t * 0.15; // Slow shape shift
+                float tFlow  = t * 0.2;  // Flow speed
 
-                // 2. Outward "Spilling" Streams
+                // 1. MORPHING STATES
+                // Blend between 2 distinct "nightmare" shapes
+                float morph = 0.5 + 0.5 * sin(tMorph); // 0.0 to 1.0
+
+                // SHAPE A: "The Ribbed Hive" (Bone Stack + Holes)
+                float dA = length(p - vec2(0.0, 0.2)) - 0.25;
+                for(int i=1; i<=3; i++) {
+                    float fi = float(i);
+                    vec2 pos = vec2(0.12, -0.1 - 0.22*fi);
+                    float rib = length(p - pos) - (0.12 - 0.02*fi);
+                    dA = smin(dA, rib, 0.2);
+                }
+                // Add porous holes to Shape A
+                float pores = sin(p.x*20.0)*sin(p.y*20.0);
+                dA += pores * 0.02;
+
+                // SHAPE B: "The Faceless" (Elongated + Hollow Chest)
+                float box = length(max(abs(p - vec2(0.0, -0.1))-vec2(0.12, 0.55),0.0)); 
+                float dB = box + min(max(abs(p.x)-0.12, abs(p.y+0.1)-0.55), 0.0); // sdBox manual
+                
+                // Carve out a huge chest cavity
+                float cavity = length(p - vec2(0.0, -0.2)) - 0.25;
+                dB = smax(dB, -cavity, 0.15); 
+                // Shoulders
+                float shoulders = length(p - vec2(0.35, 0.25)) - 0.15;
+                dB = smin(dB, shoulders, 0.2);
+
+                // BLEND Shapes
+                float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
+
+                // 2. SURFACE DETAILS (The "Eerie" Texture)
+                float boneNoise = fbm(p * 5.0 + tMorph*0.5);
+                d += boneNoise * 0.05; // Distort surface
+
+                // 3. EMANATING OOZE (Melting OUT from the form)
+                // Key: Use 'd' to distort the flow coordinate.
+                // Things closer to surface move differently.
+                
+                // Radial distance and Angle
                 float r = length(uv);
                 float a = atan(uv.y, uv.x);
-                float flow = r - t * 0.3; 
-                float streaks = noise(vec2(a * 4.0 + m1, flow * 6.0)); 
-                streaks *= noise(vec2(p.x * 20.0, p.y + t)); 
                 
-                // 3. Composite
-                float maskAlpha = smoothstep(0.0, 0.1, d);
-                float streamVis = smoothstep(0.4, 0.8, streaks);
-                streamVis *= maskAlpha * smoothstep(1.5, 0.2, r); 
+                // Flow moves OUT from center and DOWN
+                // We add 'd' to the time offset -> The flow is phased by distance from body
+                float flowPhase = tFlow - d * 2.0; 
                 
-                float bone = smoothstep(0.02, -0.05, d); 
-                bone -= smoothstep(0.3, 0.7, fbm(p * 15.0)) * 0.3; 
+                // Generate strands relative to surface
+                float strands = noise(vec2(a * 4.0 + p.x*2.0, r * 3.0 - flowPhase * 2.0));
                 
+                // Sharpen strands
+                strands = smoothstep(0.4, 0.7, strands);
+                
+                // MASKING:
+                // Emanate mask: Visible near the surface (d near 0) and slightly outside
+                float emanate = smoothstep(0.1, -0.2, d);
+                // Also fade out far away
+                emanate *= smoothstep(1.5, 0.5, r);
+                
+                float oozeVis = strands * emanate;
+
+                // 4. COMPOSITE
+                float bodyMask = smoothstep(0.01, -0.01, d);
+                
+                // Inner "Gloom"
+                float gloom = smoothstep(0.3, 0.6, boneNoise);
+                
+                // Colors
+                vec3 c_bone  = vec3(0.55, 0.53, 0.48);
+                vec3 c_void  = vec3(0.02, 0.02, 0.03);
+                vec3 c_ooze  = vec3(0.60, 0.50, 0.40); // Slightly glowing ooze?
+                
+                // Body Color
+                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.8);
+                // Darken bottom of body
+                bodyCol *= smoothstep(-0.8, 0.5, p.y); 
+
                 vec3 col = vec3(0.0);
-                col += vec3(streamVis) * 0.9; 
-                col += vec3(bone) * 0.6; 
                 
-                // Warping Eye
-                float eye = 1.0 - smoothstep(0.0, 0.05 + abs(m1)*0.05, length(p - vec2(0.12, 0.1 + m2)));
-                col -= vec3(eye); 
+                // Draw Ooze (Behind/Around body)
+                col += c_ooze * oozeVis * 0.5;
+                
+                // Draw Body
+                col = mix(col, bodyCol, bodyMask);
+                
+                // Draw "Emanating Fog" (Volumetric light effect)
+                float fog = smoothstep(0.5, 0.0, d) * fbm(p*2.0 - tFlow);
+                col += vec3(0.2, 0.18, 0.15) * fog * 0.4;
 
                 return col;
             }
 
+            void main() {
+            void main() {
             void main() {
                 vec2 uv = gl_FragCoord.xy/uResolution.xy; uv = uv*2.0-1.0; uv.x *= uResolution.x/uResolution.y;
                 vec2 vUv = uv; vUv.x = abs(vUv.x); vUv.x -= 0.1*(1.0-vUv.y)*0.5;
