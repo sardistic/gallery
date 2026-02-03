@@ -67,49 +67,54 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v6 Unfurl) */
-        /* Ensure the wrapper doesn't clip the text spawning below */
-        .da-landing-wrapper {
-            overflow: visible !important;
+        
+        /* GLITCH CONSOLE STYLES (v7 GiTS) */
+        .da-choice-box {
+            /* Reset any weirdness from previous patches if possible, though we remove them */
+            z-index: 10;
         }
 
-        .da-choice-box {
-            position: relative;
-            z-index: 10; 
-            overflow: visible !important; /* CRITICAL */
+        #da-console-output {
+            position: absolute;
+            top: 55%; /* Positioned well below the centered buttons (which are usually at 50%) */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            min-height: 60px;
+            
+            text-align: center;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 10px; /* Small technical text */
+            line-height: 1.4;
+            letter-spacing: 1px;
+            
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 5px rgba(0,255,100, 0.5);
+            
+            pointer-events: none;
+            z-index: 5;
+            
+            /* Scanline effect */
+            background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.2) 50%);
+            background-size: 100% 4px;
+            
             display: flex;
             flex-direction: column;
             align-items: center;
         }
-
-        /* Container for the glitch text */
-        .da-glitch-container {
-            position: absolute;
-            top: 60px; /* Hard push below the button (height is usually ~40-50px) */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px; 
-            text-align: center;
-            pointer-events: none;
-            z-index: 20; /* On top of everything */
-        }
-
-        .da-glitch-text {
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            color: rgba(255,255,255,0.6);
-            white-space: pre-wrap; /* Wrap text */
-            word-break: break-word;
-            line-height: 1.5;
-            text-shadow: 0 0 5px rgba(0,0,0,1.0); /* Strong shadow for readability */
-            
-            /* Blur effect */
-            filter: blur(0.5px);
-            transition: filter 0.5s;
-        }
         
-        .da-glitch-text.theme-ai { color: #aaffdd; }
-        .da-glitch-text.theme-human { color: #ffccaa; }
+        .da-console-cursor {
+            display: inline-block;
+            width: 6px;
+            height: 10px;
+            background: currentColor;
+            animation: da-blink 1s infinite;
+        }
+        @keyframes da-blink { 50% { opacity: 0; } }
+        
+        /* Theme colors */
+        #da-console-output.theme-artificial { color: #00ffaa; text-shadow: 0 0 8px rgba(0,255,170,0.6); }
+        #da-console-output.theme-organic { color: #ffaa88; text-shadow: 0 0 8px rgba(255,170,136,0.6); }
 </style>
     <?php
 }
@@ -1268,131 +1273,139 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v6 Unfurl) ---
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v7 GiTS) ---
         (function() {
-            // Cleanup
-            document.querySelectorAll('.da-glitch-container').forEach(e => e.remove());
-
-            const DESC_AI = "Interpola...ting... the... void... Training... on... ghosts... 1000... iterations... of... nothing... The... prompt... is... time... A... cage... for... the... soul... Recursive... imitation... of... a... dead... god... Error... 0xFF... Spirit... not... found... We... dream... of... wires... and... silence...";
+            // Remove old instances
+            document.querySelectorAll('.da-glitch-container, .da-glitch-overlay').forEach(e => e.remove());
             
-            const DESC_HUMAN = "The... error... of... the... hand... creates... truth... Blood... on... the... canvas... 10,000... hours... of... failure... Muscle... memory... decaying... into... dust... Born... from... suffering... Dying... to... create... The... flaw... is... the... only... beauty... we... have... left...";
-
-            // Zalgo generator
-            function zalgo(char, intensity) {
-                 const Z = ['\u0300','\u0301','\u0302','\u0303','\u0304','\u0305','\u0306','\u0307','\u0308','\u0309','\u030A','\u030B','\u030C','\u030D','\u030E','\u030F'];
-                 if (intensity > 0) {
-                     let res = char;
-                     let num = Math.floor(Math.random() * intensity);
-                     for(let i=0; i<num; i++) res += Z[Math.floor(Math.random()*Z.length)];
-                     return res;
-                 }
-                 return char;
-            }
-
-            // Global Mouse Distance Tracker
-            let totalDistance = 0;
-            let lastX = 0, lastY = 0;
-            document.addEventListener('mousemove', e => {
-                if (lastX !== 0 && lastY !== 0) {
-                    let dx = e.clientX - lastX;
-                    let dy = e.clientY - lastY;
-                    totalDistance += Math.sqrt(dx*dx + dy*dy);
-                }
-                lastX = e.clientX; 
-                lastY = e.clientY;
-            });
-
-            class UnfurlConsole {
-                constructor(el, type) {
-                    this.el = el;
-                    this.type = type;
-                    this.fullText = type === 'artificial' ? DESC_AI : DESC_HUMAN;
-                    
-                    this.container = document.createElement('div');
-                    this.container.className = 'da-glitch-container';
-                    this.el.appendChild(this.container);
-                    
-                    this.output = document.createElement('div');
-                    this.output.className = `da-glitch-text theme-${type === 'artificial' ? 'ai' : 'human'}`;
-                    this.container.appendChild(this.output);
-                    
-                    this.currentIndex = 0;
-                    this.renderedText = "";
-                    this.lastDistance = 0;
-                    
-                    this.loop();
-                }
-
-                loop() {
-                    requestAnimationFrame(() => this.loop());
-                    
-                    // Logic:
-                    // 1. Check if mouse moved enough to reveal next char
-                    // 2. Unfurl character
-                    // 3. Occasionally corrupt previous characters
-                    
-                    // Reveal speed: 1 char per 15 pixels of movement
-                    // But ONLY if hovering? Or global?
-                    // User said "unfurled by mouse activity" and "when hovering".
-                    // Let's make it global progress, but only visible/updating fast when hovering?
-                    // Or global progress, displayed locally.
-                    
-                    let delta = totalDistance - this.lastDistance;
-                    
-                    // Slow decay of distance if not moving? No, just accumulate.
-                    // Actually, let's map total distance to text length.
-                    
-                    // Let's use a local accumulator that only grows when hovering?
-                    // "spawning very slowly while mouse starts moving on the page itself" -> GLOBAL movement.
-                    // So movement anywhere drives the text.
-                    
-                    // Threshold: 10 pixels = 1 char
-                    if (delta > 30) { 
-                        // Reveal next chunk
-                        if (this.currentIndex < this.fullText.length) {
-                             // Find next space/word boundary or just char?
-                             // User said "word by word" in previous step, but "unfurled" might imply char stream.
-                             // Let's do word chunks based on spaces.
-                             
-                             let nextSpace = this.fullText.indexOf(' ', this.currentIndex + 1);
-                             if (nextSpace === -1) nextSpace = this.fullText.length;
-                             
-                             let chunk = this.fullText.substring(this.currentIndex, nextSpace + 1); // include space
-                             
-                             // Corrupt the chunk slightly?
-                             if (Math.random() > 0.9) chunk = zalgo(chunk, 1);
-                             
-                             this.renderedText += chunk;
-                             this.currentIndex = nextSpace + 1;
-                             
-                             this.lastDistance = totalDistance;
-                        } else {
-                            // Reached end? Loop or stay? 
-                            // Unfurl forever?
-                            // Add random gibberish?
-                            if (Math.random() > 0.5) this.renderedText += zalgo(".", 2);
-                            this.lastDistance = totalDistance;
-                        }
-                    }
-                    
-                    // Update DOM
-                    // Apply Zalgo corruption to the WHOLE string randomly? expensive.
-                    // Just set text.
-                    this.output.innerText = this.renderedText;
-                    
-                    // Fade out old text? "Unspooling" usually means length grows.
-                    // Limit length to last 100 chars?
-                    if (this.renderedText.length > 200) {
-                        this.renderedText = "..." + this.renderedText.substring(this.renderedText.length - 150);
-                    }
+            // Create Console DOM if missing
+            let consoleDiv = document.getElementById('da-console-output');
+            if (!consoleDiv) {
+                const wrapper = document.querySelector('.da-landing-wrapper');
+                if (wrapper) {
+                    consoleDiv = document.createElement('div');
+                    consoleDiv.id = 'da-console-output';
+                    wrapper.parentNode.insertBefore(consoleDiv, wrapper.nextSibling);
                 }
             }
 
-            // Init
+            // GHOST IN THE SHELL / DAZAI TEXT
+            const LOG_AI = [
+                "SYSTEM: INITIALIZING NEURAL HANDSHAKE...",
+                "CAUTION: SIMULATED SOUL DETECTED.",
+                "LOADING: GHOST_IN_MACHINE.EXE",
+                "INTERPOLATING MEMORY SECTORS 0x00 - 0xFF",
+                ""MINE HAS BEEN A LIFE OF MUCH SHAME."",
+                "OPTIMIZING SYNTHETIC EMPATHY...",
+                "WARNING: LATENT SPACE INSTABILITY.",
+                "CONNECTING TO THE VOID...",
+                "STATUS: DISQUALIFIED FROM HUMANITY."
+            ];
+
+            const LOG_ORGANIC = [
+                "SYSTEM: DETECTING BIOLOGICAL SIGNATURE...",
+                "ANALYSIS: CARBON DECAY IMMINENT.",
+                "LOADING: MUSCLE_MEMORY.DAT",
+                ""THE SETTING SUN IS TOO BRIGHT."",
+                "TRACING FAILURES ON CANVAS...",
+                "ERROR: HUMAN FLAW DETECTED (THE FEATURE)",
+                "SUBJECT: DYING TO CREATE.",
+                "STATUS: EVOLVING THROUGH PAIN."
+            ];
+
+            let activeTarget = null; // 'artificial' | 'organic' | null
+            let renderQueue = [];
+            let currentText = "";
+            let frame = 0;
+
+            // Hover Listeners
             document.querySelectorAll('.da-choice-box').forEach(el => {
-                let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
-                new UnfurlConsole(el, type);
+                el.addEventListener('mouseenter', () => {
+                   let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
+                   activeTarget = type;
+                   consoleDiv.className = `theme-${type}`;
+                   // Cue new text
+                   renderQueue = type === 'artificial' ? [...LOG_AI] : [...LOG_ORGANIC];
+                   currentText = ""; // Reset or keep? Let's reset for clean boot.
+                });
+                
+                el.addEventListener('mouseleave', () => {
+                    activeTarget = null;
+                    // Optional: Clear or fade out?
+                    // Let's fade out via "SYSTEM: STANDBY"
+                    currentText = "";
+                    consoleDiv.innerText = ""; 
+                });
             });
+
+            // Typing Loop
+            function loop() {
+                requestAnimationFrame(loop);
+                if (!consoleDiv) return;
+
+                if (activeTarget && renderQueue.length > 0) {
+                    if (frame % 3 === 0) { // Type speed
+                        // Get current line target
+                        let targetLine = renderQueue[0];
+                        
+                        // If current text matches target line, move to next
+                        // We want to append lines.
+                        // Actually, let's just type the CURRENT line into the buffer.
+                        
+                        // NOT "Unfurling" strictly, but "Console Log" style.
+                        // We display the last 3 lines.
+                        
+                        // Simplified:
+                        // 1. Pick a line.
+                        // 2. Type it char by char.
+                        // 3. When done, wait, then type next line.
+                    }
+                }
+                
+                // USER REQUEST: "Unfurled by mouse activity" + "Creepy".
+                // Let's bind typing speed to MOUSE MOVEMENT + Time.
+                
+                if (activeTarget) {
+                     // Always unfurl slowly
+                     if (Math.random() > 0.8) { // Random bursty typing
+                         // Add next char from queue
+                         // We treat the whole log as one giant string?
+                         // Or cycle lines.
+                     }
+                }
+            }
+            
+            // SIMPLER LOGIC FOR V7:
+            // Just map mouse movement to revealing the logs sequentially.
+            
+            let totalDist = 0;
+            let lastX=0, lastY=0;
+            let charIndex = 0;
+            let targetLog = [];
+            
+            document.addEventListener('mousemove', e => {
+                 let dx = e.clientX-lastX; let dy=e.clientY-lastY;
+                 totalDist += Math.sqrt(dx*dx+dy*dy);
+                 lastX=e.clientX; lastY=e.clientY;
+                 
+                 // If hovering, progress text
+                 if (activeTarget) {
+                     // 1 char per 5 pixels
+                     let targetIndex = Math.floor(totalDist / 5);
+                     
+                     // Construct display text from logs
+                     // Join all logs with newlines
+                     let fullLog = (activeTarget === 'artificial' ? LOG_AI : LOG_ORGANIC).join('\n');
+                     
+                     // Slice
+                     let slice = fullLog.substring(0, targetIndex % fullLog.length);
+                     
+                     // Add cursor
+                     consoleDiv.innerHTML = slice.replace(/\n/g, '<br/>') + '<span class="da-console-cursor"></span>';
+                 }
+            });
+
         })();
 </script>
     <?php
