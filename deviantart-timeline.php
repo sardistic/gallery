@@ -73,62 +73,64 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v24 Guaranteed) */
-        .da-choice-box {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column !important; /* Stack Vertical */
-            align-items: center;
-            justify-content: center;
+        
+        /* GLITCH CONSOLE STYLES (v25 Rigid) */
+        
+        /* High specificity to override any WP theme nonsense */
+        html body .da-choice-box {
+            display: flex !important;
+            flex-direction: column !important; /* CRITICAL */
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
             
-            /* Sizing */
-            width: 200px;
-            min-height: 100px; /* Give it vertical space */
-            padding: 15px;
-            overflow: visible;
+            width: 200px !important;
+            height: auto !important;
+            min-height: 120px !important;
+            padding: 20px 10px !important;
+            
+            text-decoration: none !important; /* Kill underlines */
+            border: 1px solid rgba(255,255,255,0.1); /* Subtle border */
         }
         
-        .da-title {
+        html body .da-title {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            margin-bottom: 12px !important;
+            
             font-size: 1.4em;
             font-weight: 700;
             letter-spacing: 2px;
-            margin-bottom: 10px; /* Space between title and terminal */
-            text-transform: uppercase;
+            color: #fff;
         }
 
-        .da-glitch-box {
-            /* The Terminal Window */
-            width: 100%;
-            height: 40px; /* Fixed height for text area */
+        html body .da-glitch-box {
+            display: block !important;
+            width: 100% !important;
+            height: 50px !important; /* Fixed height area */
             
-            /* Stylized "Empty" state */
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.3);
+            /* Debug/Structure Visibility */
+            background: rgba(0, 0, 0, 0.4); 
+            border: 1px dashed rgba(255, 255, 255, 0.2); 
             
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Text center */
-            
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 9px;
-            line-height: 1.2;
-            color: rgba(255,255,255,0.8);
-            text-shadow: 0 0 2px rgba(0,0,0,0.8);
-            
-            padding: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 10px;
+            padding: 5px;
             box-sizing: border-box;
+            overflow: hidden; /* Crop text if it explodes */
             
             pointer-events: none;
         }
         
-        /* Theming */
-        .da-choice-box[href*="ai"] .da-glitch-box { color: #88ffcc; border-color: rgba(0,255,170, 0.2); }
-        .da-choice-box[href*="timeline"] .da-glitch-box { color: #ffaa88; border-color: rgba(255,170,136, 0.2); }
+        /* Color themes */
+        html body .da-choice-box[href*="ai"] .da-glitch-box { color: #88ffcc; border-color: rgba(0,255,170,0.3); }
+        html body .da-choice-box[href*="timeline"] .da-glitch-box { color: #ffaa88; border-color: rgba(255,170,136,0.3); }
         
+        /* Cursor */
         .da-cursor {
             display: inline-block;
-            width: 5px; height: 9px;
+            width: 5px; height: 10px;
             background: currentColor;
             animation: da-blink 1s step-end infinite;
         }
