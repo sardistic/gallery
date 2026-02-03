@@ -903,8 +903,8 @@ function da_landing_shortcode($atts)
 
     <!-- WRAPPER -->
     <div class="da-landing-wrapper">
-        <a href="https://sardistic.com/ai/" class="da-choice-box">AI</a>
-        <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Not AI</a>
+        <a href="https://sardistic.com/ai/" class="da-choice-box">Artificial</a>
+        <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Organic</a>
     </div>
 
     <canvas id="da-webgl"></canvas>
