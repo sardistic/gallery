@@ -1001,7 +1001,7 @@ function da_landing_shortcode($atts)
                 return col;
             }
 
-                                                // --- MODE 3: ZDZISLAW (Mega-Titan v4.64) ---
+                                                            // --- MODE 3: ZDZISLAW (Gruesome v4.65) ---
             float smax(float a, float b, float k) {
                 return -smin(-a, -b, k);
             }
@@ -1010,76 +1010,91 @@ function da_landing_shortcode($atts)
                 vec2 p = uv; 
                 p.x = abs(p.x); 
                 
-                float tMorph = t * 0.12; 
-                float tFlow  = t * 0.18;  
+                float tMorph = t * 0.1; 
+                float tFlow  = t * 0.15;  
 
                 // 1. MORPHING STATES
                 float morph = 0.5 + 0.5 * sin(tMorph); 
 
-                // SHAPE A: "The Ribbed Hive" (MEGA SCALE)
-                // Radius 0.32 -> 0.45
-                float dA = length(p - vec2(0.0, 0.25)) - 0.45;
-                for(int i=1; i<=3; i++) {
+                // SHAPE A: "The Ribbed Hive"
+                // Radius 0.45
+                float dA = length(p - vec2(0.0, 0.25)) - 0.42; // Slightly smaller to reveal ribs
+                for(int i=1; i<=4; i++) { // More ribs (4)
                     float fi = float(i);
-                    vec2 pos = vec2(0.18, -0.15 - 0.28*fi); // Wider stance
-                    // Radius 0.16 -> 0.24
-                    float rib = length(p - pos) - (0.24 - 0.03*fi);
-                    dA = smin(dA, rib, 0.3); // Smoother blend
+                    vec2 pos = vec2(0.18, -0.15 - 0.25*fi); 
+                    // Sharper ribs
+                    float rib = length(p - pos) - (0.24 - 0.04*fi);
+                    dA = smin(dA, rib, 0.15); // Tighter blend (more skeletal)
                 }
-                float pores = sin(p.x*12.0)*sin(p.y*12.0);
-                dA += pores * 0.03;
+                // Pores (Trypophobia)
+                float pores = sin(p.x*25.0)*sin(p.y*25.0);
+                dA += pores * 0.015;
 
-                // SHAPE B: "The Faceless" (MEGA SCALE)
-                // Width 0.16 -> 0.25, Height 0.65 -> 0.85
-                float box = length(max(abs(p - vec2(0.0, -0.15))-vec2(0.25, 0.85),0.0)); 
-                float dB = box + min(max(abs(p.x)-0.25, abs(p.y+0.15)-0.85), 0.0); 
+                // SHAPE B: "The Faceless"
+                float box = length(max(abs(p - vec2(0.0, -0.15))-vec2(0.24, 0.85),0.0)); 
+                float dB = box + min(max(abs(p.x)-0.24, abs(p.y+0.15)-0.85), 0.0); 
                 
-                float cavity = length(p - vec2(0.0, -0.2)) - 0.4; // Huge cavity
-                dB = smax(dB, -cavity, 0.2); 
+                // Jagged Cavity
+                float cavity = length(p - vec2(0.0, -0.2)) - 0.4; 
+                cavity += 0.05 * sin(p.y * 10.0); // Ribbed cavity
+                dB = smax(dB, -cavity, 0.15); 
                 
-                // Shoulders: 0.20 -> 0.35
                 float shoulders = length(p - vec2(0.55, 0.35)) - 0.35;
-                dB = smin(dB, shoulders, 0.3);
+                dB = smin(dB, shoulders, 0.25);
 
                 // BLEND
                 float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
 
-                // 2. SURFACE DETAILS
-                float boneNoise = fbm(p * 3.5 + tMorph*0.4); 
-                d += boneNoise * 0.05; 
+                // 2. SURFACE DETAILS (Gruesome)
+                // "Peeling Skin" Noise
+                float peel = fbm(p * 8.0 + tMorph*0.2); 
+                // "Veins"
+                float veins = 1.0 - abs(noise(p * 15.0)*2.0-1.0);
+                
+                d += peel * 0.04; 
+                d += veins * 0.015;
 
-                // 3. EMANATING OOZE (Unbound)
+                // 3. EMANATING OOZE
                 float r = length(uv);
                 float a = atan(uv.y, uv.x);
                 
-                float flowPhase = tFlow - d * 2.0; 
-                float strands = noise(vec2(a * 3.0 + p.x, r * 2.0 - flowPhase * 1.5));
-                strands = smoothstep(0.4, 0.6, strands);
+                float flowPhase = tFlow - d * 2.5; 
+                // Stringy, blood-like strands
+                float strands = noise(vec2(a * 4.0 + p.x*2.0, r * 3.0 - flowPhase * 1.5));
+                strands = smoothstep(0.45, 0.75, strands); // Sharper
                 
-                float emanate = smoothstep(0.2, -0.3, d);
-                // MASK EXTENSION: 1.8 -> 3.0 (Effectively infinite/corners)
+                float emanate = smoothstep(0.1, -0.3, d);
                 emanate *= smoothstep(3.0, 0.4, r); 
                 
                 float oozeVis = strands * emanate;
 
                 // 4. COMPOSITE
-                float bodyMask = smoothstep(0.01, -0.01, d);
-                float gloom = smoothstep(0.35, 0.65, boneNoise);
+                float bodyMask = smoothstep(0.005, -0.005, d); // Sharp edge
                 
-                vec3 c_bone  = vec3(0.55, 0.53, 0.48);
-                vec3 c_void  = vec3(0.02, 0.02, 0.03);
-                vec3 c_ooze  = vec3(0.60, 0.50, 0.40); 
+                // Rotting Pits
+                float rot = smoothstep(0.4, 0.8, peel);
                 
-                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.85);
-                bodyCol *= smoothstep(-1.2, 0.8, p.y); 
+                // PALETTE: Sickly
+                vec3 c_bone   = vec3(0.50, 0.48, 0.42); // Old, yellowing bone
+                vec3 c_sore   = vec3(0.35, 0.15, 0.10); // Open sores / raw meat
+                vec3 c_void   = vec3(0.01, 0.00, 0.02); // Deep shadow
+                vec3 c_blood  = vec3(0.30, 0.05, 0.02); // Dried blood (Ooze)
+                
+                // Texturing the body
+                vec3 bodyCol = mix(c_sore, c_bone, veins); // Veins are bone-colored on sore background? Or vice versa.
+                // Actually: Bone base, sores in the noise pits
+                bodyCol = mix(c_bone, c_sore, rot); 
+                
+                // Deep shadows at bottom
+                bodyCol = mix(bodyCol, c_void, smoothstep(-0.5, -1.2, p.y));
 
                 vec3 col = vec3(0.0);
-                col += c_ooze * oozeVis * 0.65; 
+                col += c_blood * oozeVis * 0.8; // Dark, heavy ooze
                 col = mix(col, bodyCol, bodyMask);
                 
-                // Fog fills the screen
+                // Rancid Fog
                 float fog = smoothstep(0.7, -0.2, d) * fbm(p*1.2 - tFlow);
-                col += vec3(0.2, 0.18, 0.15) * fog * 0.55;
+                col += vec3(0.15, 0.12, 0.08) * fog * 0.6; // Brownish/Green fog
 
                 return col;
             }
