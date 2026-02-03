@@ -1,0 +1,25 @@
+# Secrets & Configs
+*.conf
+*.json
+*.env
+credentials.json
+token.json
+client_secret.json
+
+# Data & Assets
+deviantart-gallery/
+metadata_dump/
+govee_kinect/
+*.zip
+*.log
+*.tmp
+*.csv
+urls.txt
+
+# System
+.gemini/
+.git/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
