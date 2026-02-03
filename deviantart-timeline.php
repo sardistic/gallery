@@ -1274,7 +1274,8 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v7 GiTS) ---
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v7.1 Fix) ---
         (function() {
             // Remove old instances
             document.querySelectorAll('.da-glitch-container, .da-glitch-overlay').forEach(e => e.remove());
@@ -1290,34 +1291,33 @@ function da_landing_shortcode($atts)
                 }
             }
 
-            // GHOST IN THE SHELL / DAZAI TEXT
+            // GHOST IN THE SHELL / DAZAI TEXT (Single Quotes for Safety)
             const LOG_AI = [
-                "SYSTEM: INITIALIZING NEURAL HANDSHAKE...",
-                "CAUTION: SIMULATED SOUL DETECTED.",
-                "LOADING: GHOST_IN_MACHINE.EXE",
-                "INTERPOLATING MEMORY SECTORS 0x00 - 0xFF",
-                ""MINE HAS BEEN A LIFE OF MUCH SHAME."",
-                "OPTIMIZING SYNTHETIC EMPATHY...",
-                "WARNING: LATENT SPACE INSTABILITY.",
-                "CONNECTING TO THE VOID...",
-                "STATUS: DISQUALIFIED FROM HUMANITY."
+                'SYSTEM: INITIALIZING NEURAL HANDSHAKE...',
+                'CAUTION: SIMULATED SOUL DETECTED.',
+                'LOADING: GHOST_IN_MACHINE.EXE',
+                'INTERPOLATING MEMORY SECTORS 0x00 - 0xFF',
+                '"MINE HAS BEEN A LIFE OF MUCH SHAME."',
+                'OPTIMIZING SYNTHETIC EMPATHY...',
+                'WARNING: LATENT SPACE INSTABILITY.',
+                'CONNECTING TO THE VOID...',
+                'STATUS: DISQUALIFIED FROM HUMANITY.'
             ];
 
             const LOG_ORGANIC = [
-                "SYSTEM: DETECTING BIOLOGICAL SIGNATURE...",
-                "ANALYSIS: CARBON DECAY IMMINENT.",
-                "LOADING: MUSCLE_MEMORY.DAT",
-                ""THE SETTING SUN IS TOO BRIGHT."",
-                "TRACING FAILURES ON CANVAS...",
-                "ERROR: HUMAN FLAW DETECTED (THE FEATURE)",
-                "SUBJECT: DYING TO CREATE.",
-                "STATUS: EVOLVING THROUGH PAIN."
+                'SYSTEM: DETECTING BIOLOGICAL SIGNATURE...',
+                'ANALYSIS: CARBON DECAY IMMINENT.',
+                'LOADING: MUSCLE_MEMORY.DAT',
+                '"THE SETTING SUN IS TOO BRIGHT."',
+                'TRACING FAILURES ON CANVAS...',
+                'ERROR: HUMAN FLAW DETECTED (THE FEATURE)',
+                'SUBJECT: DYING TO CREATE.',
+                'STATUS: EVOLVING THROUGH PAIN.'
             ];
 
-            let activeTarget = null; // 'artificial' | 'organic' | null
-            let renderQueue = [];
-            let currentText = "";
-            let frame = 0;
+            let activeTarget = null; 
+            let totalDist = 0;
+            let lastX=0, lastY=0;
 
             // Hover Listeners
             document.querySelectorAll('.da-choice-box').forEach(el => {
@@ -1325,83 +1325,42 @@ function da_landing_shortcode($atts)
                    let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
                    activeTarget = type;
                    consoleDiv.className = `theme-${type}`;
-                   // Cue new text
-                   renderQueue = type === 'artificial' ? [...LOG_AI] : [...LOG_ORGANIC];
-                   currentText = ""; // Reset or keep? Let's reset for clean boot.
+                   // Reset distance logic on entry?
+                   // If we keep totalDist, it might jump to middle of log.
+                   // Let's NOT reset totalDist, users can "scroll" back and forth by moving?
+                   // No, totalDist only goes up. 
+                   // Resetting totalDist allows reading from start.
+                   totalDist = 0;
                 });
                 
                 el.addEventListener('mouseleave', () => {
                     activeTarget = null;
-                    // Optional: Clear or fade out?
-                    // Let's fade out via "SYSTEM: STANDBY"
-                    currentText = "";
                     consoleDiv.innerText = ""; 
                 });
             });
 
-            // Typing Loop
-            function loop() {
-                requestAnimationFrame(loop);
-                if (!consoleDiv) return;
-
-                if (activeTarget && renderQueue.length > 0) {
-                    if (frame % 3 === 0) { // Type speed
-                        // Get current line target
-                        let targetLine = renderQueue[0];
-                        
-                        // If current text matches target line, move to next
-                        // We want to append lines.
-                        // Actually, let's just type the CURRENT line into the buffer.
-                        
-                        // NOT "Unfurling" strictly, but "Console Log" style.
-                        // We display the last 3 lines.
-                        
-                        // Simplified:
-                        // 1. Pick a line.
-                        // 2. Type it char by char.
-                        // 3. When done, wait, then type next line.
-                    }
-                }
-                
-                // USER REQUEST: "Unfurled by mouse activity" + "Creepy".
-                // Let's bind typing speed to MOUSE MOVEMENT + Time.
-                
-                if (activeTarget) {
-                     // Always unfurl slowly
-                     if (Math.random() > 0.8) { // Random bursty typing
-                         // Add next char from queue
-                         // We treat the whole log as one giant string?
-                         // Or cycle lines.
-                     }
-                }
-            }
-            
-            // SIMPLER LOGIC FOR V7:
-            // Just map mouse movement to revealing the logs sequentially.
-            
-            let totalDist = 0;
-            let lastX=0, lastY=0;
-            let charIndex = 0;
-            let targetLog = [];
-            
+            // Logic: Map movement to text unfurling
             document.addEventListener('mousemove', e => {
                  let dx = e.clientX-lastX; let dy=e.clientY-lastY;
-                 totalDist += Math.sqrt(dx*dx+dy*dy);
+                 // Filter jumps (e.g. initial load)
+                 let d = Math.sqrt(dx*dx+dy*dy);
+                 if (d < 100) totalDist += d;
+                 
                  lastX=e.clientX; lastY=e.clientY;
                  
-                 // If hovering, progress text
-                 if (activeTarget) {
-                     // 1 char per 5 pixels
-                     let targetIndex = Math.floor(totalDist / 5);
+                 if (activeTarget && consoleDiv) {
+                     // 1 char per 4 pixels
+                     let targetIndex = Math.floor(totalDist / 4);
                      
-                     // Construct display text from logs
-                     // Join all logs with newlines
-                     let fullLog = (activeTarget === 'artificial' ? LOG_AI : LOG_ORGANIC).join('\n');
+                     let logs = activeTarget === 'artificial' ? LOG_AI : LOG_ORGANIC;
+                     let fullLog = logs.join('\n');
                      
-                     // Slice
-                     let slice = fullLog.substring(0, targetIndex % fullLog.length);
+                     let len = fullLog.length;
+                     let safeIndex = Math.min(targetIndex, len); // Stop at end
                      
-                     // Add cursor
+                     let slice = fullLog.substring(0, safeIndex);
+                     
+                     // Cursor blinking
                      consoleDiv.innerHTML = slice.replace(/\n/g, '<br/>') + '<span class="da-console-cursor"></span>';
                  }
             });
