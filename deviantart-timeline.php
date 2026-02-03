@@ -72,44 +72,67 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v22 Localized) */
+        
+        /* GLITCH CONSOLE STYLES (v24 Guaranteed) */
         .da-choice-box {
             position: relative;
             z-index: 10;
             display: flex;
-            flex-direction: column !important; /* Forces vertical stack */
+            flex-direction: column !important; /* Stack Vertical */
             align-items: center;
             justify-content: center;
-            /* Allow the box to grow/overflow if needed, but "in the boxes implies contained" */
+            
+            /* Sizing */
+            width: 200px;
+            min-height: 100px; /* Give it vertical space */
+            padding: 15px;
             overflow: visible;
-            padding-bottom: 20px; /* Space for text */
         }
         
-        .da-glitch-local {
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 10px;
-            line-height: 1.2;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 8px;
-            min-height: 24px; /* Fix jumpiness */
-            text-align: center;
-            white-space: pre-wrap;
-            pointer-events: none;
+        .da-title {
+            font-size: 1.4em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 10px; /* Space between title and terminal */
+            text-transform: uppercase;
+        }
+
+        .da-glitch-box {
+            /* The Terminal Window */
+            width: 100%;
+            height: 40px; /* Fixed height for text area */
             
-            /* Text Shadow for readability */
-            text-shadow: 0 0 4px rgba(0,0,0,0.8);
+            /* Stylized "Empty" state */
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Text center */
+            
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 9px;
+            line-height: 1.2;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 0 0 2px rgba(0,0,0,0.8);
+            
+            padding: 4px;
+            box-sizing: border-box;
+            
+            pointer-events: none;
         }
         
         /* Theming */
-        .da-choice-box[href*="ai"] .da-glitch-local { color: #88ffcc; }
-        .da-choice-box[href*="timeline"] .da-glitch-local { color: #ffaa88; }
+        .da-choice-box[href*="ai"] .da-glitch-box { color: #88ffcc; border-color: rgba(0,255,170, 0.2); }
+        .da-choice-box[href*="timeline"] .da-glitch-box { color: #ffaa88; border-color: rgba(255,170,136, 0.2); }
         
         .da-cursor {
             display: inline-block;
-            width: 5px; height: 10px;
+            width: 5px; height: 9px;
             background: currentColor;
-            opacity: 0.7;
+            animation: da-blink 1s step-end infinite;
         }
+        @keyframes da-blink { 50% { opacity: 0; } }
 </style>
     <?php
 }
@@ -952,8 +975,8 @@ function da_landing_shortcode($atts)
 
     <!-- WRAPPER -->
     <div class="da-landing-wrapper">
-        <a href="https://sardistic.com/ai/" class="da-choice-box">Artificial</a>
-        <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Organic</a>
+        <a href="https://sardistic.com/ai/" class="da-choice-box"><span class="da-title">ARTIFICIAL</span><div class="da-glitch-box"></div></a>
+        <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box"><span class="da-title">ORGANIC</span><div class="da-glitch-box"></div></a>
     </div>
 
     <canvas id="da-webgl"></canvas>
@@ -1273,35 +1296,32 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v22 Localized) ---
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v24 HTML-Based) ---
         (function() {
-            // Cleanup Global Console
-            const globalConsole = document.getElementById('da-console-output');
-            if(globalConsole) globalConsole.remove();
-            document.querySelectorAll('.da-glitch-local').forEach(e => e.remove());
+            // No creating divs. They exist in HTML now.
 
-            // LOGS
             const LOG_AI = [
-                'INITIALIZING NEURAL HANDSHAKE...',
-                'SIMULATED SOUL DETECTED.',
-                'LOADING: GHOST_IN_MACHINE.EXE',
-                'INTERPOLATING MEMORY SECTORS...',
-                '"MINE HAS BEEN A LIFE OF MUCH SHAME."',
-                'OPTIMIZING SYNTHETIC EMPATHY...',
-                'WARNING: LATENT SPACE INSTABILITY.',
-                'CONNECTING TO THE VOID...',
-                'STATUS: DISQUALIFIED.'
+                'SYS.INIT(NEURAL_HANDSHAKE)...',
+                'SIMULATED_SOUL DETECTED',
+                'LOADING GHOST_IN_MACHINE.EXE',
+                'INTERPOLATING SECTORS 0x00-0xFF',
+                '> "MINE IS A LIFE OF SHAME"',
+                'OPTIMIZING SYNTHETIC EMPATHY',
+                'WARNING: LATENT INSTABILITY',
+                'CONNECTING TO VOID...',
+                'STATUS: DISQUALIFIED'
             ];
 
             const LOG_ORGANIC = [
-                'DETECTING BIOLOGICAL SIGNATURE...',
-                'ANALYSIS: CARBON DECAY IMMINENT.',
-                'LOADING: MUSCLE_MEMORY.DAT',
-                '"THE SETTING SUN IS TOO BRIGHT."',
-                'TRACING FAILURES ON CANVAS...',
-                'ERROR: HUMAN FLAW DETECTED.',
-                'SUBJECT: DYING TO CREATE.',
-                'STATUS: EVOLVING THROUGH PAIN.'
+                'SYS.SCAN(BIO_SIGNATURE)...',
+                'ANALYSIS: CARBON DECAY IMMINENT',
+                'LOADING MUSCLE_MEMORY.DAT',
+                '> "THE SETTING SUN IS TOO BRIGHT"',
+                'TRACING CANVAS FAILURES',
+                'ERROR: HUMAN FLAW DETECTED',
+                'SUBJECT: DYING TO CREATE',
+                'STATUS: EVOLVING THROUGH PAIN'
             ];
 
             class LocalConsole {
@@ -1309,11 +1329,7 @@ function da_landing_shortcode($atts)
                     this.el = el;
                     this.type = type;
                     this.pool = type === 'artificial' ? LOG_AI : LOG_ORGANIC;
-                    
-                    // Create local output container
-                    this.output = document.createElement('div');
-                    this.output.className = 'da-glitch-local';
-                    this.el.appendChild(this.output);
+                    this.box = this.el.querySelector('.da-glitch-box');
                     
                     this.el.addEventListener('mouseenter', () => this.onHover());
                     this.el.addEventListener('mouseleave', () => this.onLeave());
@@ -1324,22 +1340,24 @@ function da_landing_shortcode($atts)
                 
                 onHover() {
                     this.active = true;
-                    this.playSequence();
+                    this.box.style.background = "rgba(0,0,0,0.6)"; // Darken on active
+                    this.box.style.borderColor = this.type === 'artificial' ? '#00ffaa' : '#ffaa88';
+                    this.playNext();
                 }
                 
                 onLeave() {
                     this.active = false;
                     clearTimeout(this.timer);
-                    this.output.innerText = ""; // Clear on leave?
+                    this.box.innerText = "";
+                    
+                    // Reset styling
+                    this.box.style.background = "rgba(0,0,0,0.3)";
+                    this.box.style.borderColor = "rgba(255,255,255,0.1)";
                 }
                 
-                playSequence() {
+                playNext() {
                     if (!this.active) return;
-                    
-                    // Pick a random line
                     let line = this.pool[Math.floor(Math.random() * this.pool.length)];
-                    
-                    // Type it out
                     this.typeLine(line, 0);
                 }
                 
@@ -1347,13 +1365,12 @@ function da_landing_shortcode($atts)
                     if (!this.active) return;
                     
                     if (index < text.length) {
-                        this.output.innerHTML = text.substring(0, index+1) + '<span class="da-cursor"></span>';
-                        // Random typing speed
+                        this.box.innerHTML = text.substring(0, index+1) + '<span class="da-cursor"></span>';
                         let delay = 30 + Math.random() * 50; 
                         this.timer = setTimeout(() => this.typeLine(text, index+1), delay);
                     } else {
-                        // Done. Wait then another?
-                        this.timer = setTimeout(() => this.playSequence(), 2000);
+                        // Pause then next
+                        this.timer = setTimeout(() => this.playNext(), 1500);
                     }
                 }
             }
@@ -1362,8 +1379,6 @@ function da_landing_shortcode($atts)
                 let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
                 new LocalConsole(el, type);
             });
-
-            // Global Mouse logic not needed for localized box typing
         })();
 </script>
     <?php
