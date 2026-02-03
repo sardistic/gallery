@@ -628,81 +628,241 @@ function da_landing_shortcode($atts)
     <style>
         /* LANDING PAGE ISOLATION */
         /* Hide Footer Only */
-        footer, #colophon, .site-footer, .elementor-location-footer { display: none !important; }
-        
+        footer,
+        #colophon,
+        .site-footer,
+        .elementor-location-footer {
+            display: none !important;
+        }
+
         /* Ensure Header is visible and top-most */
-        header, #masthead, .site-header, #wpadminbar, .elementor-location-header, #header { 
+        header,
+        #masthead,
+        .site-header,
+        #wpadminbar,
+        .elementor-location-header,
+        #header {
             /* display: block !important; */
-            position: relative; 
-            z-index: 9999 !important; 
+            position: relative;
+            z-index: 9999 !important;
             opacity: 1 !important;
             visibility: visible !important;
         }
-        
+
         /* Body Transparent to show Canvas (-1), HTML provides Black Base */
-        html { background: #050505 !important; height: 100% !important; }
-        body { margin: 0 !important; padding: 0 !important; overflow: hidden !important; background: transparent !important; height: 100% !important; }
+        html {
+            background: #050505 !important;
+            height: 100% !important;
+        }
+
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: transparent !important;
+            height: 100% !important;
+        }
 
         /* Ensure content sits ABOVE the glass */
         .da-landing-wrapper {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            gap: 40px; z-index: 10;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            z-index: 10;
         }
 
         /* Canvas at Z-1 (Standard Background) */
         canvas#da-webgl {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: -1; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
             pointer-events: none;
             opacity: 1 !important;
         }
 
         .da-choice-box {
-            width: 300px; height: 300px;
+            width: 300px;
+            height: 300px;
             background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; font-weight: 700; color: #fff; text-decoration: none;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            transition: all 0.4s ease; cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s ease;
+            cursor: pointer;
             font-family: 'Inter', system-ui, sans-serif;
-            position: relative; overflow: hidden; pointer-events: auto;
+            position: relative;
+            overflow: hidden;
+            pointer-events: auto;
         }
+
         .da-choice-box:hover {
             transform: translateY(-10px) scale(1.05);
-            background: rgba(0,0,0,0.4); 
-            backdrop-filter: none; -webkit-backdrop-filter: none;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
             border-color: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
         }
+
         .da-choice-box::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
             transition: 0.5s;
         }
-        .da-choice-box:hover::after { left: 100%; }
 
-        @media (max-width: 700px) { .da-landing-wrapper { flex-direction: column; } }
+        .da-choice-box:hover::after {
+            left: 100%;
+        }
+
+        @media (max-width: 700px) {
+            .da-landing-wrapper {
+                flex-direction: column;
+            }
+        }
+
+        /* STYLE SWITCHER KEYFRAMES */
+        @keyframes da-fade-in {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* BUTTON GROUP */
+        .da-btn-group {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .da-float-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .da-float-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+            color: #fff;
+        }
+
+        .da-float-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
 
         /* GLOBAL VIGNETTE */
         .da-vignette {
-            position: fixed; inset: 0; pointer-events: none; z-index: 0; 
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
             background: radial-gradient(circle at center, transparent 20%, #000 120%);
+        }
+
+        /* PERMANENT TOOLBAR UI */
+        #da-mode-toolbar {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 99999999;
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            /* Force clickable */
+        }
+
+        .da-mode-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.6);
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .da-mode-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .da-mode-btn.selected {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
         }
 
         /* GLOBAL GLASS OVERLAY */
         .da-glass-overlay {
-            position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 1; pointer-events: none;
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            background: rgba(0,0,0,0.01);
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.01);
             transition: clip-path 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), -webkit-clip-path 0.4s;
-            -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0);
+            -webkit-clip-path: inset(0 0 0 0);
+            clip-path: inset(0 0 0 0);
+        }
+
+        canvas#da-webgl {
+            transition: opacity 1s ease;
         }
     </style>
 
@@ -710,6 +870,38 @@ function da_landing_shortcode($atts)
     <div class="da-vignette"></div>
     <div class="da-glass-overlay"></div>
 
+    <!-- UI: PERMANENT TOOLBAR -->
+    <div id="da-mode-toolbar">
+        <!-- Mode 0: Smoke -->
+        <div class="da-mode-btn" data-mode="0" title="Smoke" onclick="window.DA_CTRL.select(0)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 15h18M3 10h18M5 20h14M7 5h10"></path>
+            </svg>
+        </div>
+        <!-- Mode 1: Decay -->
+        <div class="da-mode-btn" data-mode="1" title="Decay" onclick="window.DA_CTRL.select(1)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2c-4 0-8 4-8 9 0 3.5 2 6.5 5 8v3h6v-3c3-1.5 5-4.5 5-8 0-5-4-9-8-9z"></path>
+                <circle cx="9" cy="10" r="1.5"></circle>
+                <circle cx="15" cy="10" r="1.5"></circle>
+            </svg>
+        </div>
+        <!-- Mode 2: Void (Original) -->
+        <div class="da-mode-btn" data-mode="2" title="Void" onclick="window.DA_CTRL.select(2)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+        </div>
+        <!-- Mode 3: Zdzisław (Rorschach) -->
+        <div class="da-mode-btn" data-mode="3" title="Zdzisław" onclick="window.DA_CTRL.select(3)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- WRAPPER -->
     <div class="da-landing-wrapper">
         <a href="https://sardistic.com/ai/" class="da-choice-box">AI</a>
         <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Not AI</a>
@@ -719,95 +911,268 @@ function da_landing_shortcode($atts)
 
     <!-- SHADERS -->
     <script id="vs" type="x-shader/x-vertex">
-        attribute vec2 position; varying vec2 vUv;
-        void main() { vUv = position; gl_Position = vec4(position, 0.0, 1.0); }
-    </script>
+                            attribute vec2 position; varying vec2 vUv;
+                            void main() { vUv = position; gl_Position = vec4(position, 0.0, 1.0); }
+                        </script>
     <script id="fs" type="x-shader/x-fragment">
-        precision mediump float; uniform float uTime; uniform vec2 uResolution; uniform vec2 uMouse;
-        mat2 rot(float a) { float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
-        float random(in vec2 st) { return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123); }
-        float noise(in vec2 st) {
-            vec2 i=floor(st); vec2 f=fract(st);
-            float a=random(i); float b=random(i+vec2(1,0)); float c=random(i+vec2(0,1)); float d=random(i+vec2(1,1));
-            vec2 u=f*f*(3.0-2.0*f);
-            return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;
-        }
-        #define OCTAVES 5
-        float fbm(in vec2 st) {
-            float v=0.0; float a=0.5; mat2 m=rot(0.5);
-            for(int i=0; i<OCTAVES; i++){ float n = abs(noise(st)*2.0-1.0); n = 1.0 - n; n = n*n; v+=a*n; st=m*st*2.1; a*=0.45; }
-            return v;
-        }
-        float pattern(in vec2 p, out vec2 q, out vec2 r, float t, float w) {
-            q.x=fbm(p); q.y=fbm(p+vec2(5.2,1.3));
-            r.x=fbm(p+4.0*q*w+vec2(1.7,9.2)+0.15*t);
-            r.y=fbm(p+4.0*q*w+vec2(8.3,2.8)+0.126*t);
-            return fbm(p+4.0*r+vec2(0.0,-0.4*t));
-        }
-        void main() {
-            vec2 uv = gl_FragCoord.xy/uResolution.xy; uv = uv*2.0-1.0; uv.x *= uResolution.x/uResolution.y;
-            uv.x = abs(uv.x); uv.x -= 0.1*(1.0-uv.y)*0.5;
-            float t = uTime*0.2; float mX = uMouse.x/uResolution.x; float mY = uMouse.y/uResolution.y;
+                            precision mediump float; uniform float uTime; uniform vec2 uResolution; uniform vec2 uMouse; uniform float uMode;
+        
+                            // COMMON UTILS
+                            mat2 rot(float a) { float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
+                            float random(in vec2 st) { return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123); }
+                            float noise(in vec2 st) {
+                                vec2 i=floor(st); vec2 f=fract(st);
+                                float a=random(i); float b=random(i+vec2(1,0)); float c=random(i+vec2(0,1)); float d=random(i+vec2(1,1));
+                                vec2 u=f*f*(3.0-2.0*f);
+                                return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;
+                            }
+                            #define OCTAVES 5
+                            float fbm(in vec2 st) {
+                                float v=0.0; float a=0.5; mat2 m=rot(0.5);
+                                for(int i=0; i<OCTAVES; i++){ float n = abs(noise(st)*2.0-1.0); n = 1.0 - n; n = n*n; v+=a*n; st=m*st*2.1; a*=0.45; }
+                                return v;
+                            }
+
+                            // --- MODE 0: SMOKE (Original) ---
+                            vec3 getSmoke(vec2 uv, float t, float w) {
+                                vec2 p = uv * 1.6;
+                                vec2 q, r;
+                                q.x = fbm(p); q.y = fbm(p+vec2(5.2,1.3));
+                                r.x = fbm(p+4.0*q*w+vec2(1.7,9.2)+0.15*t);
+                                r.y = fbm(p+4.0*q*w+vec2(8.3,2.8)+0.126*t);
+                                float f = fbm(p+4.0*r+vec2(0.0,-0.4*t));
+                                float ink = f * length(r);
+                                ink = pow(ink, 1.5) * 2.5;
             
-            // FIX: Constant Density
-            float w = 0.2 + mX*0.5; 
-            float dIn = 0.8 + mY*0.5; 
+                                float dist = length(uv);
+                                ink *= smoothstep(1.8, 0.2, dist); // Mask
             
-            vec2 p = uv*1.6; vec2 q,r; float f = pattern(p,q,r,t,w);
-            float ink = f * length(r); ink = pow(ink, 1.5) * 2.5;
-            float dist = length(uv); float mask = smoothstep(1.8, 0.2, dist); ink *= mask * dIn;
-            float core = smoothstep(1.0, 0.0, dist + f*0.5); ink += core * 0.3 * dIn; ink = clamp(ink, 0.0, 1.0);
-            vec3 color = vec3(ink * 0.95); color = mix(vec3(0.02), vec3(0.95), ink);
-            gl_FragColor = vec4(color, 1.0);
-        }
-    </script>
-    
-    <!-- SAFE MODE JS: IIFE + No Cache -->
+                                vec3 col = vec3(ink * 0.95);
+                                return mix(vec3(0.02), vec3(0.95), ink);
+                            }
+
+                            // --- MODE 1: BEKSINSKI (Decay) ---
+                            vec3 getBeksinski(vec2 uv, float t, float w) {
+                                vec2 p = uv * 1.2;
+                                float slowT = t * 0.25; // Slower
+                                vec2 q, r;
+                                q.x = fbm(p); q.y = fbm(p+vec2(5.2,1.3));
+                                r.x = fbm(p+4.0*q*w+vec2(1.7,9.2)+0.15*slowT);
+                                r.y = fbm(p+4.0*q*w+vec2(8.3,2.8)+0.126*slowT);
+                                float f = fbm(p+4.0*r+vec2(0.0,-0.4*slowT));
+            
+                                float ink = f * length(r);
+                                ink = pow(ink, 1.2) * 3.5; // High contrast
+            
+                                float dist = length(uv);
+                                ink *= smoothstep(1.8, 0.2, dist);
+            
+                                // Rust/Bone Palette
+                                vec3 c_void = vec3(0.02, 0.0, 0.0);
+                                vec3 c_rust = vec3(0.45, 0.15, 0.05);
+                                vec3 c_bone = vec3(0.70, 0.65, 0.55);
+            
+                                vec3 col = mix(c_void, c_rust, smoothstep(0.0, 0.4, ink));
+                                col = mix(col, c_bone, smoothstep(0.3, 1.0, ink));
+                                return col * smoothstep(1.5, 0.5, dist); // Vignette
+                            }
+
+            // Helper: Smooth Min for organic blending
+            float smin(float a, float b, float k) {
+                float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+                return mix(b, a, h) - k*h*(1.0-h);
+            }
+
+            // --- MODE 2: VOID SORT (Original Inward) ---
+            vec3 getVoid(vec2 uv, float t) {
+                vec2 p = uv; p.x = abs(p.x);
+                float flow = t * 0.2;
+                float scan = noise(vec2(p.x * 2.0 + flow, p.y * 100.0)); 
+                float voidDist = length(p - vec2(0.0, 0.1)) - 0.3; 
+                voidDist += noise(p * 5.0 + t*0.1) * 0.1; 
+                float pileUp = smoothstep(0.1, 0.0, voidDist); 
+                float streams = smoothstep(0.4, 0.6, scan);
+                streams *= smoothstep(0.0, 0.2, voidDist); 
+                streams *= smoothstep(1.0, 0.0, p.x); 
+                float edge = smoothstep(0.05, 0.0, abs(voidDist));
+                vec3 col = vec3(0.0); 
+                col += vec3(streams) * 0.8; 
+                col += vec3(edge) * 0.5; 
+                return col;
+            }
+
+            // --- MODE 3: ZDZISLAW (Outward Spill + Warping) ---
+            vec3 getZdzislaw(vec2 uv, float t) {
+                vec2 p = uv; 
+                p.x = abs(p.x); 
+                
+                // Warping Morph Factors
+                float m1 = sin(t * 0.5) * 0.1;
+                float m2 = cos(t * 0.3) * 0.15;
+                float m3 = sin(t * 0.7) * 0.1;
+                
+                // 1. The "Mask" (Morphing Beksiński structure)
+                float d = length(p - vec2(0.0, 0.15 + m1)) - (0.25 + m2); // Morphing Cranium
+                d = smin(d, length(p - vec2(0.35 + m1, -0.2)) - 0.15, 0.2); // Cheekbones
+                d = smin(d, length(p - vec2(0.0 + m3, -0.5 + m2)) - (0.1 + m1), 0.25); // Morphing Jaw
+                
+                d += fbm(p * 4.0 + t * 0.05) * 0.08; // Decay texture
+
+                // 2. Outward "Spilling" Streams
+                float r = length(uv);
+                float a = atan(uv.y, uv.x);
+                float flow = r - t * 0.3; 
+                float streaks = noise(vec2(a * 4.0 + m1, flow * 6.0)); 
+                streaks *= noise(vec2(p.x * 20.0, p.y + t)); 
+                
+                // 3. Composite
+                float maskAlpha = smoothstep(0.0, 0.1, d);
+                float streamVis = smoothstep(0.4, 0.8, streaks);
+                streamVis *= maskAlpha * smoothstep(1.5, 0.2, r); 
+                
+                float bone = smoothstep(0.02, -0.05, d); 
+                bone -= smoothstep(0.3, 0.7, fbm(p * 15.0)) * 0.3; 
+                
+                vec3 col = vec3(0.0);
+                col += vec3(streamVis) * 0.9; 
+                col += vec3(bone) * 0.6; 
+                
+                // Warping Eye
+                float eye = 1.0 - smoothstep(0.0, 0.05 + abs(m1)*0.05, length(p - vec2(0.12, 0.1 + m2)));
+                col -= vec3(eye); 
+
+                return col;
+            }
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy/uResolution.xy; uv = uv*2.0-1.0; uv.x *= uResolution.x/uResolution.y;
+                vec2 vUv = uv; vUv.x = abs(vUv.x); vUv.x -= 0.1*(1.0-vUv.y)*0.5;
+
+                float t = uTime * 0.2;
+                float mX = uMouse.x/uResolution.x;
+                float w = 0.2 + mX*0.5;
+
+                float w0 = max(0.0, 1.0 - abs(uMode - 0.0));
+                float w1 = max(0.0, 1.0 - abs(uMode - 1.0));
+                float w2 = max(0.0, 1.0 - abs(uMode - 2.0));
+                float w3 = max(0.0, 1.0 - abs(uMode - 3.0));
+
+                vec3 col = vec3(0.0);
+                if(w0 > 0.01) col += getSmoke(vUv, t, w) * w0;
+                if(w1 > 0.01) col += getBeksinski(vUv, uTime, w) * w1;
+                if(w2 > 0.01) col += getVoid(uv, uTime) * w2;
+                if(w3 > 0.01) col += getZdzislaw(uv, uTime) * w3;
+
+                gl_FragColor = vec4(col, 1.0);
+            }
+                        </script>
+
+    <!-- SAFE MODE JS: UI First, Then WebGL -->
     <script data-cfasync="false">
-        (function() {
+        // 1. DEFINE CONTROLLER IN GLOBAL SCOPE IMMEDIATELY
+        window.DA_CTRL = {
+            targetMode: 2.0,
+            select: function (mode) {
+                this.targetMode = parseFloat(mode);
+
+                // UI Update
+                const opts = document.querySelectorAll('.da-mode-btn');
+                opts.forEach(o => {
+                    if (parseFloat(o.getAttribute('data-mode')) === this.targetMode) o.classList.add('selected');
+                    else o.classList.remove('selected');
+                });
+            }
+        };
+
+        (function () {
             document.addEventListener('DOMContentLoaded', function () {
-                // WEBGL SETUP
-                const c = document.getElementById('da-webgl'); 
+                let currentMode = 2.0;
+                let isPaused = false;
+                let rendering = true;
+
+                const c = document.getElementById('da-webgl');
+
+                // Init Selection UI
+                const opts = document.querySelectorAll('.da-mode-btn');
+                opts.forEach(o => {
+                    if (parseFloat(o.getAttribute('data-mode')) === window.DA_CTRL.targetMode) o.classList.add('selected');
+                });
+
+                // --- 2. WEBGL SETUP ---
                 if (!c) return;
                 const g = c.getContext('webgl');
                 if (!g) return;
-                
+
                 const r = () => { c.width = window.innerWidth; c.height = window.innerHeight; g.viewport(0, 0, c.width, c.height); };
                 window.addEventListener('resize', r); r();
-                
+
                 const cs = (g, t, s) => { const h = g.createShader(t); g.shaderSource(h, s); g.compileShader(h); return h; };
                 const p = g.createProgram();
-                g.attachShader(p, cs(g, g.VERTEX_SHADER, document.getElementById('vs').innerText));
-                g.attachShader(p, cs(g, g.FRAGMENT_SHADER, document.getElementById('fs').innerText));
-                g.linkProgram(p); g.useProgram(p);
-                
+
+                // Safety Compile Checks
+                const vsS = document.getElementById('vs').innerText;
+                const fsS = document.getElementById('fs').innerText;
+
+                const vSh = cs(g, g.VERTEX_SHADER, vsS);
+                const fSh = cs(g, g.FRAGMENT_SHADER, fsS);
+
+                g.attachShader(p, vSh);
+                g.attachShader(p, fSh);
+                g.linkProgram(p);
+
+                if (!g.getProgramParameter(p, g.LINK_STATUS)) {
+                    console.error('Shader Link Error:', g.getProgramInfoLog(p));
+                    return;
+                }
+                g.useProgram(p);
+
                 const b = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, b);
                 g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), g.STATIC_DRAW);
-                
+
                 const pl = g.getAttribLocation(p, "position"); g.enableVertexAttribArray(pl); g.vertexAttribPointer(pl, 2, g.FLOAT, false, 0, 0);
-                const ut = g.getUniformLocation(p, 'uTime'); const ur = g.getUniformLocation(p, 'uResolution'); const um = g.getUniformLocation(p, 'uMouse');
-                
+                const ut = g.getUniformLocation(p, 'uTime');
+                const ur = g.getUniformLocation(p, 'uResolution');
+                const um = g.getUniformLocation(p, 'uMouse');
+                const uModeLoc = g.getUniformLocation(p, 'uMode');
+
                 let mx = window.innerWidth / 2, my = window.innerHeight / 2;
                 window.addEventListener('mousemove', e => { mx = e.clientX; my = window.innerHeight - e.clientY; });
-                
-                const ren = (t) => { g.uniform1f(ut, t * 0.001); g.uniform2f(ur, c.width, c.height); g.uniform2f(um, mx, my); g.drawArrays(g.TRIANGLES, 0, 6); requestAnimationFrame(ren); };
-                requestAnimationFrame(ren);
-    
-                // CLIP-PATH PORTAL LOGIC
+
+                // Loop function
+                function runLoop(t) {
+                    if (!rendering) return;
+
+                    // FORCE PROGRAM ACTIVE to prevent INVALID_OPERATION
+                    g.useProgram(p);
+
+                    // Sync with Global State
+                    let target = window.DA_CTRL ? window.DA_CTRL.targetMode : 2.0;
+
+                    let diff = target - currentMode;
+                    if (Math.abs(diff) > 0.01) currentMode += diff * 0.05;
+                    else currentMode = target;
+
+                    g.uniform1f(ut, t * 0.001);
+                    g.uniform2f(ur, c.width, c.height);
+                    g.uniform2f(um, mx, my);
+                    g.uniform1f(uModeLoc, currentMode);
+
+                    g.drawArrays(g.TRIANGLES, 0, 6);
+                    requestAnimationFrame(runLoop);
+                }
+                requestAnimationFrame(runLoop);
+
+                // --- 3. CLIP-PATH LOGIC ---
                 const overlay = document.querySelector('.da-glass-overlay');
                 const boxes = document.querySelectorAll('.da-choice-box');
-    
                 boxes.forEach(box => {
                     box.addEventListener('mouseenter', () => {
                         const r = box.getBoundingClientRect();
                         const poly = `polygon(0% 0%, 0% 100%, ${r.left}px 100%, ${r.left}px ${r.top}px, ${r.right}px ${r.top}px, ${r.right}px ${r.bottom}px, ${r.left}px ${r.bottom}px, ${r.left}px 100%, 100% 100%, 100% 0%)`;
-                        overlay.style.clipPath = poly;
-                        overlay.style.webkitClipPath = poly;
+                        if (overlay) { overlay.style.clipPath = poly; overlay.style.webkitClipPath = poly; }
                     });
-    
                     box.addEventListener('mouseleave', () => {
-                        overlay.style.clipPath = 'inset(0 0 0 0)';
-                        overlay.style.webkitClipPath = 'inset(0 0 0 0)';
+                        if (overlay) { overlay.style.clipPath = 'inset(0 0 0 0)'; overlay.style.webkitClipPath = 'inset(0 0 0 0)'; }
                     });
                 });
             });
