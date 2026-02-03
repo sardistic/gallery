@@ -69,14 +69,16 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v7.2 Visibility) */
+        
+        
+        /* GLITCH CONSOLE STYLES (v21 Fixed) */
         #da-console-output {
-            position: absolute;
-            top: 60%; /* Safe zone below buttons */
+            position: fixed; /* Relative to viewport */
+            top: 60%; 
             left: 50%;
             transform: translateX(-50%);
             width: 500px;
-            min-height: 80px;
+            min-height: 50px;
             
             text-align: center;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
@@ -85,14 +87,15 @@ function da_print_styles()
             letter-spacing: 1px;
             
             color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 0 5px rgba(0,255,100, 0.7);
+            text-shadow: 0 0 4px rgba(0,255,100, 0.7);
             
             pointer-events: none;
-            z-index: 1000; /* SUPER HIGH Z-INDEX */
+            z-index: 20000; /* Above WordPress Admin Bar (9999) + Glass Overlay */
             
-            /* Scanline effect */
-            background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.2) 50%);
-            background-size: 100% 4px;
+            /* Subtle Terminal BG */
+            background: linear-gradient(to bottom, rgba(0,10,0,0.4) 0%, rgba(0,0,0,0) 100%);
+            border-top: 1px solid rgba(0,255,100,0.3);
+            padding-top: 10px;
             
             display: flex;
             flex-direction: column;
@@ -101,15 +104,15 @@ function da_print_styles()
         
         .da-console-cursor {
             display: inline-block;
-            width: 8px;
-            height: 12px;
+            width: 6px;
+            height: 11px;
             background: currentColor;
-            animation: da-blink 0.5s infinite;
+            animation: da-blink 0.8s infinite;
         }
         @keyframes da-blink { 50% { opacity: 0; } }
         
-        #da-console-output.theme-artificial { color: #00ffaa; text-shadow: 0 0 8px rgba(0,255,170,0.6); }
-        #da-console-output.theme-organic { color: #ffaa88; text-shadow: 0 0 8px rgba(255,170,136,0.6); }
+        #da-console-output.theme-artificial { color: #00ffaa; text-shadow: 0 0 6px rgba(0,255,170,0.6); border-top-color: #00ffaa; }
+        #da-console-output.theme-organic { color: #ffaa88; text-shadow: 0 0 6px rgba(255,170,136,0.6); border-top-color: #ffaa88; }
 </style>
     <?php
 }
@@ -1271,23 +1274,25 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v7.1 Fix) ---
+        
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v21 Fixed) ---
         (function() {
-            // Remove old instances
-            document.querySelectorAll('.da-glitch-container, .da-glitch-overlay').forEach(e => e.remove());
-            
-            // Create Console DOM if missing
+            // MOUNT TO BODY (Escape Stacking Contexts)
             let consoleDiv = document.getElementById('da-console-output');
-            if (!consoleDiv) {
-                const wrapper = document.querySelector('.da-landing-wrapper');
-                if (wrapper) {
-                    consoleDiv = document.createElement('div');
-                    consoleDiv.id = 'da-console-output';
-                    wrapper.parentNode.insertBefore(consoleDiv, wrapper.nextSibling);
-                }
+            if (consoleDiv && consoleDiv.parentNode !== document.body) {
+                document.body.appendChild(consoleDiv);
             }
+            
+            // Backup creation if PHP failed
+            if (!consoleDiv) {
+                consoleDiv = document.createElement('div');
+                consoleDiv.id = 'da-console-output';
+                document.body.appendChild(consoleDiv);
+            }
+            
+            consoleDiv.innerHTML = ""; // Clear diagnostics
 
-            // GHOST IN THE SHELL / DAZAI TEXT (Single Quotes for Safety)
             const LOG_AI = [
                 'SYSTEM: INITIALIZING NEURAL HANDSHAKE...',
                 'CAUTION: SIMULATED SOUL DETECTED.',
@@ -1312,51 +1317,41 @@ function da_landing_shortcode($atts)
             ];
 
             let activeTarget = null; 
-            let totalDist = 0;
+            let totalDist = 0; 
             let lastX=0, lastY=0;
 
-            // Hover Listeners
             document.querySelectorAll('.da-choice-box').forEach(el => {
                 el.addEventListener('mouseenter', () => {
                    let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
                    activeTarget = type;
                    consoleDiv.className = `theme-${type}`;
-                   // Reset distance logic on entry?
-                   // If we keep totalDist, it might jump to middle of log.
-                   // Let's NOT reset totalDist, users can "scroll" back and forth by moving?
-                   // No, totalDist only goes up. 
-                   // Resetting totalDist allows reading from start.
-                   totalDist = 0;
+                   // Do NOT reset totalDist, allows continuous reading.
                 });
                 
                 el.addEventListener('mouseleave', () => {
                     activeTarget = null;
-                    consoleDiv.innerText = ""; 
+                    consoleDiv.innerHTML = ""; // Clear
+                    consoleDiv.className = "";
                 });
             });
 
-            // Logic: Map movement to text unfurling
             document.addEventListener('mousemove', e => {
                  let dx = e.clientX-lastX; let dy=e.clientY-lastY;
-                 // Filter jumps (e.g. initial load)
                  let d = Math.sqrt(dx*dx+dy*dy);
-                 if (d < 100) totalDist += d;
-                 
+                 if (d < 100) totalDist += d; // Cap huge jumps
                  lastX=e.clientX; lastY=e.clientY;
                  
                  if (activeTarget && consoleDiv) {
-                     // 1 char per 4 pixels
-                     let targetIndex = Math.floor(totalDist / 4);
+                     // 1 char per 6 pixels (slower, cleaner)
+                     let targetIndex = Math.floor(totalDist / 6);
                      
                      let logs = activeTarget === 'artificial' ? LOG_AI : LOG_ORGANIC;
                      let fullLog = logs.join('\n');
                      
-                     let len = fullLog.length;
-                     let safeIndex = Math.min(targetIndex, len); // Stop at end
-                     
+                     let safeIndex = Math.min(targetIndex, fullLog.length);
                      let slice = fullLog.substring(0, safeIndex);
                      
-                     // Cursor blinking
+                     // Nice formatting
                      consoleDiv.innerHTML = slice.replace(/\n/g, '<br/>') + '<span class="da-console-cursor"></span>';
                  }
             });
