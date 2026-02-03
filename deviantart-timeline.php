@@ -71,48 +71,45 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v21 Fixed) */
-        #da-console-output {
-            position: fixed; /* Relative to viewport */
-            top: 60%; 
-            left: 50%;
-            transform: translateX(-50%);
-            width: 500px;
-            min-height: 50px;
-            
-            text-align: center;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 11px;
-            line-height: 1.4;
-            letter-spacing: 1px;
-            
-            color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 0 4px rgba(0,255,100, 0.7);
-            
-            pointer-events: none;
-            z-index: 20000; /* Above WordPress Admin Bar (9999) + Glass Overlay */
-            
-            /* Subtle Terminal BG */
-            background: linear-gradient(to bottom, rgba(0,10,0,0.4) 0%, rgba(0,0,0,0) 100%);
-            border-top: 1px solid rgba(0,255,100,0.3);
-            padding-top: 10px;
-            
+        
+        /* GLITCH CONSOLE STYLES (v22 Localized) */
+        .da-choice-box {
+            position: relative;
+            z-index: 10;
             display: flex;
-            flex-direction: column;
+            flex-direction: column !important; /* Forces vertical stack */
             align-items: center;
+            justify-content: center;
+            /* Allow the box to grow/overflow if needed, but "in the boxes implies contained" */
+            overflow: visible;
+            padding-bottom: 20px; /* Space for text */
         }
         
-        .da-console-cursor {
+        .da-glitch-local {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.2;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 8px;
+            min-height: 24px; /* Fix jumpiness */
+            text-align: center;
+            white-space: pre-wrap;
+            pointer-events: none;
+            
+            /* Text Shadow for readability */
+            text-shadow: 0 0 4px rgba(0,0,0,0.8);
+        }
+        
+        /* Theming */
+        .da-choice-box[href*="ai"] .da-glitch-local { color: #88ffcc; }
+        .da-choice-box[href*="timeline"] .da-glitch-local { color: #ffaa88; }
+        
+        .da-cursor {
             display: inline-block;
-            width: 6px;
-            height: 11px;
+            width: 5px; height: 10px;
             background: currentColor;
-            animation: da-blink 0.8s infinite;
+            opacity: 0.7;
         }
-        @keyframes da-blink { 50% { opacity: 0; } }
-        
-        #da-console-output.theme-artificial { color: #00ffaa; text-shadow: 0 0 6px rgba(0,255,170,0.6); border-top-color: #00ffaa; }
-        #da-console-output.theme-organic { color: #ffaa88; text-shadow: 0 0 6px rgba(255,170,136,0.6); border-top-color: #ffaa88; }
 </style>
     <?php
 }
@@ -958,7 +955,6 @@ function da_landing_shortcode($atts)
         <a href="https://sardistic.com/ai/" class="da-choice-box">Artificial</a>
         <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Organic</a>
     </div>
-    <div id="da-console-output"></div>
 
     <canvas id="da-webgl"></canvas>
 
@@ -1276,86 +1272,98 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v21 Fixed) ---
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v22 Localized) ---
         (function() {
-            // MOUNT TO BODY (Escape Stacking Contexts)
-            let consoleDiv = document.getElementById('da-console-output');
-            if (consoleDiv && consoleDiv.parentNode !== document.body) {
-                document.body.appendChild(consoleDiv);
-            }
-            
-            // Backup creation if PHP failed
-            if (!consoleDiv) {
-                consoleDiv = document.createElement('div');
-                consoleDiv.id = 'da-console-output';
-                document.body.appendChild(consoleDiv);
-            }
-            
-            consoleDiv.innerHTML = ""; // Clear diagnostics
+            // Cleanup Global Console
+            const globalConsole = document.getElementById('da-console-output');
+            if(globalConsole) globalConsole.remove();
+            document.querySelectorAll('.da-glitch-local').forEach(e => e.remove());
 
+            // LOGS
             const LOG_AI = [
-                'SYSTEM: INITIALIZING NEURAL HANDSHAKE...',
-                'CAUTION: SIMULATED SOUL DETECTED.',
+                'INITIALIZING NEURAL HANDSHAKE...',
+                'SIMULATED SOUL DETECTED.',
                 'LOADING: GHOST_IN_MACHINE.EXE',
-                'INTERPOLATING MEMORY SECTORS 0x00 - 0xFF',
+                'INTERPOLATING MEMORY SECTORS...',
                 '"MINE HAS BEEN A LIFE OF MUCH SHAME."',
                 'OPTIMIZING SYNTHETIC EMPATHY...',
                 'WARNING: LATENT SPACE INSTABILITY.',
                 'CONNECTING TO THE VOID...',
-                'STATUS: DISQUALIFIED FROM HUMANITY.'
+                'STATUS: DISQUALIFIED.'
             ];
 
             const LOG_ORGANIC = [
-                'SYSTEM: DETECTING BIOLOGICAL SIGNATURE...',
+                'DETECTING BIOLOGICAL SIGNATURE...',
                 'ANALYSIS: CARBON DECAY IMMINENT.',
                 'LOADING: MUSCLE_MEMORY.DAT',
                 '"THE SETTING SUN IS TOO BRIGHT."',
                 'TRACING FAILURES ON CANVAS...',
-                'ERROR: HUMAN FLAW DETECTED (THE FEATURE)',
+                'ERROR: HUMAN FLAW DETECTED.',
                 'SUBJECT: DYING TO CREATE.',
                 'STATUS: EVOLVING THROUGH PAIN.'
             ];
 
-            let activeTarget = null; 
-            let totalDist = 0; 
-            let lastX=0, lastY=0;
+            class LocalConsole {
+                constructor(el, type) {
+                    this.el = el;
+                    this.type = type;
+                    this.pool = type === 'artificial' ? LOG_AI : LOG_ORGANIC;
+                    
+                    // Create local output container
+                    this.output = document.createElement('div');
+                    this.output.className = 'da-glitch-local';
+                    this.el.appendChild(this.output);
+                    
+                    this.el.addEventListener('mouseenter', () => this.onHover());
+                    this.el.addEventListener('mouseleave', () => this.onLeave());
+                    
+                    this.active = false;
+                    this.timer = null;
+                }
+                
+                onHover() {
+                    this.active = true;
+                    this.playSequence();
+                }
+                
+                onLeave() {
+                    this.active = false;
+                    clearTimeout(this.timer);
+                    this.output.innerText = ""; // Clear on leave?
+                }
+                
+                playSequence() {
+                    if (!this.active) return;
+                    
+                    // Pick a random line
+                    let line = this.pool[Math.floor(Math.random() * this.pool.length)];
+                    
+                    // Type it out
+                    this.typeLine(line, 0);
+                }
+                
+                typeLine(text, index) {
+                    if (!this.active) return;
+                    
+                    if (index < text.length) {
+                        this.output.innerHTML = text.substring(0, index+1) + '<span class="da-cursor"></span>';
+                        // Random typing speed
+                        let delay = 30 + Math.random() * 50; 
+                        this.timer = setTimeout(() => this.typeLine(text, index+1), delay);
+                    } else {
+                        // Done. Wait then another?
+                        this.timer = setTimeout(() => this.playSequence(), 2000);
+                    }
+                }
+            }
 
             document.querySelectorAll('.da-choice-box').forEach(el => {
-                el.addEventListener('mouseenter', () => {
-                   let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
-                   activeTarget = type;
-                   consoleDiv.className = `theme-${type}`;
-                   // Do NOT reset totalDist, allows continuous reading.
-                });
-                
-                el.addEventListener('mouseleave', () => {
-                    activeTarget = null;
-                    consoleDiv.innerHTML = ""; // Clear
-                    consoleDiv.className = "";
-                });
+                let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
+                new LocalConsole(el, type);
             });
 
-            document.addEventListener('mousemove', e => {
-                 let dx = e.clientX-lastX; let dy=e.clientY-lastY;
-                 let d = Math.sqrt(dx*dx+dy*dy);
-                 if (d < 100) totalDist += d; // Cap huge jumps
-                 lastX=e.clientX; lastY=e.clientY;
-                 
-                 if (activeTarget && consoleDiv) {
-                     // 1 char per 6 pixels (slower, cleaner)
-                     let targetIndex = Math.floor(totalDist / 6);
-                     
-                     let logs = activeTarget === 'artificial' ? LOG_AI : LOG_ORGANIC;
-                     let fullLog = logs.join('\n');
-                     
-                     let safeIndex = Math.min(targetIndex, fullLog.length);
-                     let slice = fullLog.substring(0, safeIndex);
-                     
-                     // Nice formatting
-                     consoleDiv.innerHTML = slice.replace(/\n/g, '<br/>') + '<span class="da-console-cursor"></span>';
-                 }
-            });
-
+            // Global Mouse logic not needed for localized box typing
         })();
 </script>
     <?php
