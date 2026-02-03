@@ -68,31 +68,27 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v7 GiTS) */
-        .da-choice-box {
-            /* Reset any weirdness from previous patches if possible, though we remove them */
-            z-index: 10;
-        }
-
+        
+        /* GLITCH CONSOLE STYLES (v7.2 Visibility) */
         #da-console-output {
             position: absolute;
-            top: 55%; /* Positioned well below the centered buttons (which are usually at 50%) */
+            top: 60%; /* Safe zone below buttons */
             left: 50%;
             transform: translateX(-50%);
-            width: 400px;
-            min-height: 60px;
+            width: 500px;
+            min-height: 80px;
             
             text-align: center;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 10px; /* Small technical text */
+            font-size: 11px;
             line-height: 1.4;
             letter-spacing: 1px;
             
-            color: rgba(255, 255, 255, 0.8);
-            text-shadow: 0 0 5px rgba(0,255,100, 0.5);
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 5px rgba(0,255,100, 0.7);
             
             pointer-events: none;
-            z-index: 5;
+            z-index: 1000; /* SUPER HIGH Z-INDEX */
             
             /* Scanline effect */
             background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.2) 50%);
@@ -105,14 +101,13 @@ function da_print_styles()
         
         .da-console-cursor {
             display: inline-block;
-            width: 6px;
-            height: 10px;
+            width: 8px;
+            height: 12px;
             background: currentColor;
-            animation: da-blink 1s infinite;
+            animation: da-blink 0.5s infinite;
         }
         @keyframes da-blink { 50% { opacity: 0; } }
         
-        /* Theme colors */
         #da-console-output.theme-artificial { color: #00ffaa; text-shadow: 0 0 8px rgba(0,255,170,0.6); }
         #da-console-output.theme-organic { color: #ffaa88; text-shadow: 0 0 8px rgba(255,170,136,0.6); }
 </style>
@@ -960,6 +955,7 @@ function da_landing_shortcode($atts)
         <a href="https://sardistic.com/ai/" class="da-choice-box">Artificial</a>
         <a href="https://sardistic.com/gallery-timeline/" class="da-choice-box">Organic</a>
     </div>
+    <div id="da-console-output"></div>
 
     <canvas id="da-webgl"></canvas>
 
