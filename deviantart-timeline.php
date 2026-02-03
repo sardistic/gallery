@@ -1001,110 +1001,81 @@ function da_landing_shortcode($atts)
                 return col;
             }
 
-                                                                        // --- MODE 3: ZDZISLAW (Visceral Meltdown v4.66) ---
-            float smax(float a, float b, float k) { return -smin(-a, -b, k); }
-            
-            // Voronoi-ish cellular noise for blisters
-            float cellular(vec2 p) {
-                vec2 n = floor(p);
-                vec2 f = fract(p);
-                float min_dist = 1.0;
-                for(int y=-1; y<=1; y++) {
-                    for(int x=-1; x<=1; x++) {
-                        vec2 neighbor = vec2(float(x),float(y));
-                        vec2 point = random(n + neighbor);
-                        point = 0.5 + 0.5*sin(6.2831*point); // Animate?
-                        vec2 diff = neighbor + point - f;
-                        float dist = length(diff);
-                        min_dist = min(min_dist, dist);
-                    }
-                }
-                return min_dist;
+                                                                                                // --- MODE 3: ZDZISLAW (Mega-Titan v4.64) ---
+            float smax(float a, float b, float k) {
+                return -smin(-a, -b, k);
             }
 
             vec3 getZdzislaw(vec2 uv, float t) {
                 vec2 p = uv; 
                 p.x = abs(p.x); 
                 
-                // 1. HEAVY MELT (Domain Warping)
-                // We distort the P coordinates BEFORE calculating SDFs.
-                // This drags the whole shape downwards like wax.
-                float meltNoise = fbm(p * 2.0 + vec2(0.0, t * 0.2));
-                float meltStr = 0.15; // Strength of melt
-                p.y -= meltStr * meltNoise;
-                p.y += 0.05 * sin(p.x * 5.0 + t); // Wavy distortion
+                float tMorph = t * 0.12; 
+                float tFlow  = t * 0.18;  
 
-                // 2. DYNAMIC SPASMS
-                // Occasional twitching
-                float twitch = smoothstep(0.8, 1.0, sin(t * 3.0)) * sin(t * 20.0) * 0.02;
-                p.x += twitch;
+                // 1. MORPHING STATES
+                float morph = 0.5 + 0.5 * sin(tMorph); 
 
-                // 3. SDF STRUCTURE (Mega Scale)
-                float d = 100.0;
+                // SHAPE A: "The Ribbed Hive" (MEGA SCALE)
+                float dA = length(p - vec2(0.0, 0.25)) - 0.45;
+                for(int i=1; i<=3; i++) {
+                    float fi = float(i);
+                    vec2 pos = vec2(0.18, -0.15 - 0.28*fi); 
+                    float rib = length(p - pos) - (0.24 - 0.03*fi);
+                    dA = smin(dA, rib, 0.3); 
+                }
+                float pores = sin(p.x*12.0)*sin(p.y*12.0);
+                dA += pores * 0.03;
+
+                // SHAPE B: "The Faceless" (MEGA SCALE)
+                float box = length(max(abs(p - vec2(0.0, -0.15))-vec2(0.25, 0.85),0.0)); 
+                float dB = box + min(max(abs(p.x)-0.25, abs(p.y+0.15)-0.85), 0.0); 
                 
-                // Breathing
-                float breath = 0.5 + 0.5*sin(t*0.5);
-
-                // A. The "Hive" Head
-                float head = length(p - vec2(0.0, 0.3)) - 0.45;
-                // Distort head shape
-                head += 0.03 * sin(p.y * 10.0 + t); 
-
-                // B. Ribcage / Torso (Split Open)
-                float torso = length(p - vec2(0.25, -0.3)) - 0.3;
-                torso = smin(torso, length(p - vec2(0.0, -0.5)) - 0.25, 0.2);
+                float cavity = length(p - vec2(0.0, -0.2)) - 0.4; 
+                dB = smax(dB, -cavity, 0.2); 
                 
-                // Combine
-                d = head;
-                d = smin(d, torso, 0.15);
-                
-                // C. Cavity (The "Rot")
-                // Carve out random holes
-                float holes = fbm(p * 4.0 - t*0.1);
-                d += holes * 0.15; // Displace surface heavily
+                float shoulders = length(p - vec2(0.55, 0.35)) - 0.35;
+                dB = smin(dB, shoulders, 0.3);
 
-                // 4. TEXTURE: BLISTERS & SORES
-                // Use cellular noise inverted for "bubbles"
-                float cells = cellular(p * 8.0);
-                float blisters = smoothstep(0.2, 0.7, cells);
-                
-                // Apply blister displacement
-                d -= blisters * 0.03;
+                // BLEND
+                float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
 
-                // 5. COLORS (Gruesome Palette)
-                float mask = smoothstep(0.01, -0.01, d);
-                
-                // Base: Dead Flesh
-                vec3 c_flesh = vec3(0.40, 0.35, 0.30);
-                // Sore: Inflamed Tissue
-                vec3 c_sore  = vec3(0.35, 0.10, 0.05);
-                // Void: Black Rot
-                vec3 c_rot   = vec3(0.05, 0.02, 0.00);
+                // 2. SURFACE DETAILS
+                float boneNoise = fbm(p * 3.5 + tMorph*0.4); 
+                d += boneNoise * 0.05; 
 
-                // Mix based on "Holes" noise
-                vec3 bodyCol = mix(c_flesh, c_sore, holes * 1.5);
-                // Darken deep blisters
-                bodyCol = mix(bodyCol, c_rot, 1.0 - blisters);
-                
-                // "Wet" Specular Highlight (The Ooze)
-                float wet = smoothstep(0.4, 0.45, cells);
-                bodyCol += vec3(0.2) * wet;
-
-                // EMANATING OOZE (Background)
+                // 3. EMANATING OOZE (Unbound)
                 float r = length(uv);
                 float a = atan(uv.y, uv.x);
-                float flow = r - t * 0.1;
-                float strands = noise(vec2(a * 5.0, flow * 4.0));
                 
-                // Colors for strands
-                vec3 c_strand = vec3(0.25, 0.05, 0.02); // Dried blood
+                float flowPhase = tFlow - d * 2.0; 
+                float strands = noise(vec2(a * 3.0 + p.x, r * 2.0 - flowPhase * 1.5));
+                strands = smoothstep(0.4, 0.6, strands);
                 
+                float emanate = smoothstep(0.2, -0.3, d);
+                // MASK EXTENSION: Infinite/Corners
+                emanate *= smoothstep(3.0, 0.4, r); 
+                
+                float oozeVis = strands * emanate;
+
+                // 4. COMPOSITE
+                float bodyMask = smoothstep(0.01, -0.01, d);
+                float gloom = smoothstep(0.35, 0.65, boneNoise);
+                
+                vec3 c_bone  = vec3(0.55, 0.53, 0.48);
+                vec3 c_void  = vec3(0.02, 0.02, 0.03);
+                vec3 c_ooze  = vec3(0.60, 0.50, 0.40); 
+                
+                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.85);
+                bodyCol *= smoothstep(-1.2, 0.8, p.y); 
+
                 vec3 col = vec3(0.0);
-                col += c_strand * smoothstep(0.4, 0.8, strands) * smoothstep(0.1, -0.5, d);
-                col = mix(col, bodyCol, mask);
+                col += c_ooze * oozeVis * 0.65; 
+                col = mix(col, bodyCol, bodyMask);
                 
-                // Shadows
-                col *= smoothstep(-1.2, 0.8, p.y); 
+                // Fog fills the screen
+                float fog = smoothstep(0.7, -0.2, d) * fbm(p*1.2 - tFlow);
+                col += vec3(0.2, 0.18, 0.15) * fog * 0.55;
 
                 return col;
             }
@@ -1136,7 +1107,7 @@ function da_landing_shortcode($atts)
     <script data-cfasync="false">
         // 1. DEFINE CONTROLLER IN GLOBAL SCOPE IMMEDIATELY
         window.DA_CTRL = {
-            targetMode: 2.0,
+            targetMode: 3.0,
             select: function (mode) {
                 this.targetMode = parseFloat(mode);
 
@@ -1151,7 +1122,7 @@ function da_landing_shortcode($atts)
 
         (function () {
             document.addEventListener('DOMContentLoaded', function () {
-                let currentMode = 2.0;
+                let currentMode = 3.0;
                 let isPaused = false;
                 let rendering = true;
 
