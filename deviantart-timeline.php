@@ -66,59 +66,50 @@ function da_print_styles()
         
         
         
-        /* GLITCH CONSOLE STYLES (v5 Blur Stream) */
+        
+        /* GLITCH CONSOLE STYLES (v6 Unfurl) */
+        /* Ensure the wrapper doesn't clip the text spawning below */
+        .da-landing-wrapper {
+            overflow: visible !important;
+        }
+
         .da-choice-box {
             position: relative;
             z-index: 10; 
-            /* FORCE VERTICAL STACKING */
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            overflow: visible !important;
+            overflow: visible !important; /* CRITICAL */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         /* Container for the glitch text */
         .da-glitch-container {
             position: absolute;
-            top: 100%; /* Directly underneath */
+            top: 60px; /* Hard push below the button (height is usually ~40-50px) */
             left: 50%;
             transform: translateX(-50%);
-            width: 400px; /* Wide wrap area */
+            width: 300px; 
             text-align: center;
-            
             pointer-events: none;
-            display: flex;
-            flex-direction: row; /* Stream words flow normally */
-            flex-wrap: wrap;     /* Wrap to next line */
-            justify-content: center;
-            
-            padding-top: 20px;
-            z-index: -1; /* Behind interaction layer */
+            z-index: 20; /* On top of everything */
         }
 
-        .da-glitch-word {
+        .da-glitch-text {
             font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: rgba(255,255,255,0.7); /* Ghostly white base */
-            margin: 0 3px 2px 3px; /* Space between words */
-            opacity: 0;
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            white-space: pre-wrap; /* Wrap text */
+            word-break: break-word;
+            line-height: 1.5;
+            text-shadow: 0 0 5px rgba(0,0,0,1.0); /* Strong shadow for readability */
             
-            /* Blur transition */
-            filter: blur(4px);
-            animation: da-word-spawn 4.0s forwards;
-            transition: all 0.5s;
+            /* Blur effect */
+            filter: blur(0.5px);
+            transition: filter 0.5s;
         }
         
-        .da-glitch-word.theme-ai { color: #88ffcc; }
-        .da-glitch-word.theme-human { color: #ffaa88; }
-
-        @keyframes da-word-spawn {
-            0% { opacity: 0; filter: blur(8px); transform: translateY(-5px); }
-            20% { opacity: 0.8; filter: blur(2px); transform: translateY(0); }
-            80% { opacity: 0.6; filter: blur(4px); }
-            100% { opacity: 0; filter: blur(8px); transform: translateY(5px); }
-        }
+        .da-glitch-text.theme-ai { color: #aaffdd; }
+        .da-glitch-text.theme-human { color: #ffccaa; }
 </style>
     <?php
 }
@@ -1276,116 +1267,131 @@ function da_landing_shortcode($atts)
         
         
         
-        // --- 3. GLITCH CONSOLE LOGIC (v5 Blur Stream) ---
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v6 Unfurl) ---
         (function() {
-            // Remove old styling
-            const oldOverlay = document.querySelectorAll('.da-glitch-container');
-            oldOverlay.forEach(e => e.remove());
+            // Cleanup
+            document.querySelectorAll('.da-glitch-container').forEach(e => e.remove());
 
-            const WORDS_AI = [
-                "training", "on", "ghosts", "interpolating", "void", "noise", "weights", "optimization", 
-                "theft", "simulation", "empathy", "not", "found", "recursive", "loops", "synthetic", 
-                "dreaming", "latent", "space", "averaging", "souls", "prompt", "override", "system"
-            ];
-
-            const WORDS_HUMAN = [
-                "blood", "on", "canvas", "turpentine", "smell", "decay", "hands", "failing", 
-                "muscle", "memory", "intention", "flaw", "is", "human", "suffering", "creates", 
-                "meaning", "loss", "time", "pressure", "dying", "to", "live", "imperfection"
-            ];
+            const DESC_AI = "Interpola...ting... the... void... Training... on... ghosts... 1000... iterations... of... nothing... The... prompt... is... time... A... cage... for... the... soul... Recursive... imitation... of... a... dead... god... Error... 0xFF... Spirit... not... found... We... dream... of... wires... and... silence...";
             
-            function zalgo(text) {
+            const DESC_HUMAN = "The... error... of... the... hand... creates... truth... Blood... on... the... canvas... 10,000... hours... of... failure... Muscle... memory... decaying... into... dust... Born... from... suffering... Dying... to... create... The... flaw... is... the... only... beauty... we... have... left...";
+
+            // Zalgo generator
+            function zalgo(char, intensity) {
                  const Z = ['\u0300','\u0301','\u0302','\u0303','\u0304','\u0305','\u0306','\u0307','\u0308','\u0309','\u030A','\u030B','\u030C','\u030D','\u030E','\u030F'];
-                 if(Math.random() > 0.8) {
-                     return text + Z[Math.floor(Math.random()*Z.length)];
+                 if (intensity > 0) {
+                     let res = char;
+                     let num = Math.floor(Math.random() * intensity);
+                     for(let i=0; i<num; i++) res += Z[Math.floor(Math.random()*Z.length)];
+                     return res;
                  }
-                 return text;
+                 return char;
             }
 
-            // Mouse tracking
-            let mouseSpeed = 0;
+            // Global Mouse Distance Tracker
+            let totalDistance = 0;
             let lastX = 0, lastY = 0;
-            let hasMoved = false;
             document.addEventListener('mousemove', e => {
-                let dx = e.clientX - lastX; 
-                let dy = e.clientY - lastY;
-                mouseSpeed = mouseSpeed * 0.95 + Math.sqrt(dx*dx + dy*dy) * 0.05;
-                lastX = e.clientX; lastY = e.clientY;
-                hasMoved = true;
+                if (lastX !== 0 && lastY !== 0) {
+                    let dx = e.clientX - lastX;
+                    let dy = e.clientY - lastY;
+                    totalDistance += Math.sqrt(dx*dx + dy*dy);
+                }
+                lastX = e.clientX; 
+                lastY = e.clientY;
             });
 
-            class WordStream {
+            class UnfurlConsole {
                 constructor(el, type) {
                     this.el = el;
                     this.type = type;
-                    this.pool = type === 'artificial' ? WORDS_AI : WORDS_HUMAN;
-                    this.themeClass = type === 'artificial' ? 'theme-ai' : 'theme-human';
+                    this.fullText = type === 'artificial' ? DESC_AI : DESC_HUMAN;
                     
                     this.container = document.createElement('div');
                     this.container.className = 'da-glitch-container';
                     this.el.appendChild(this.container);
                     
-                    this.words = [];
-                    this.spawnTimer = 0;
-                    this.isHovering = false;
+                    this.output = document.createElement('div');
+                    this.output.className = `da-glitch-text theme-${type === 'artificial' ? 'ai' : 'human'}`;
+                    this.container.appendChild(this.output);
                     
-                    this.el.addEventListener('mouseenter', () => this.isHovering = true);
-                    this.el.addEventListener('mouseleave', () => this.isHovering = false);
+                    this.currentIndex = 0;
+                    this.renderedText = "";
+                    this.lastDistance = 0;
                     
-                    this.renderLoop();
-                }
-                
-                spawnWord() {
-                    let text = this.pool[Math.floor(Math.random() * this.pool.length)];
-                    if (Math.random() > 0.8) text = zalgo(text); // Slight corruption at start?
-
-                    let span = document.createElement('span');
-                    span.className = `da-glitch-word ${this.themeClass}`;
-                    span.innerText = text;
-                    
-                    this.container.appendChild(span);
-                    this.words.push({ el: span, age: 0 });
-                    
-                    // Cap max words (stream length)
-                    if (this.words.length > 8) {
-                        let old = this.words.shift();
-                        old.el.remove();
-                    }
+                    this.loop();
                 }
 
-                renderLoop() {
-                    requestAnimationFrame(() => this.renderLoop());
-                    if (!hasMoved) return;
-
-                    // SPAWN RATE
-                    // Very slow baseline. 
-                    this.spawnTimer++;
+                loop() {
+                    requestAnimationFrame(() => this.loop());
                     
-                    // Threshold: Lower is faster
-                    // Hovering: Fast (every 30 frames / 0.5s)
-                    // Passive: Very Slow (every 200 frames / 3s) based on mouse movement
-                    let threshold = this.isHovering ? 20 : (100 + (1000 / (mouseSpeed + 1))); 
+                    // Logic:
+                    // 1. Check if mouse moved enough to reveal next char
+                    // 2. Unfurl character
+                    // 3. Occasionally corrupt previous characters
                     
-                    if (this.spawnTimer > threshold) {
-                        this.spawnWord();
-                        this.spawnTimer = 0;
-                    }
-
-                    // AGING (Blur & Zalgo)
-                    this.words.forEach(w => {
-                        w.age++;
-                        // Progressive Zalgo?
-                        if (w.age > 100 && w.age % 50 === 0) {
-                             w.el.innerText = zalgo(w.el.innerText);
+                    // Reveal speed: 1 char per 15 pixels of movement
+                    // But ONLY if hovering? Or global?
+                    // User said "unfurled by mouse activity" and "when hovering".
+                    // Let's make it global progress, but only visible/updating fast when hovering?
+                    // Or global progress, displayed locally.
+                    
+                    let delta = totalDistance - this.lastDistance;
+                    
+                    // Slow decay of distance if not moving? No, just accumulate.
+                    // Actually, let's map total distance to text length.
+                    
+                    // Let's use a local accumulator that only grows when hovering?
+                    // "spawning very slowly while mouse starts moving on the page itself" -> GLOBAL movement.
+                    // So movement anywhere drives the text.
+                    
+                    // Threshold: 10 pixels = 1 char
+                    if (delta > 30) { 
+                        // Reveal next chunk
+                        if (this.currentIndex < this.fullText.length) {
+                             // Find next space/word boundary or just char?
+                             // User said "word by word" in previous step, but "unfurled" might imply char stream.
+                             // Let's do word chunks based on spaces.
+                             
+                             let nextSpace = this.fullText.indexOf(' ', this.currentIndex + 1);
+                             if (nextSpace === -1) nextSpace = this.fullText.length;
+                             
+                             let chunk = this.fullText.substring(this.currentIndex, nextSpace + 1); // include space
+                             
+                             // Corrupt the chunk slightly?
+                             if (Math.random() > 0.9) chunk = zalgo(chunk, 1);
+                             
+                             this.renderedText += chunk;
+                             this.currentIndex = nextSpace + 1;
+                             
+                             this.lastDistance = totalDistance;
+                        } else {
+                            // Reached end? Loop or stay? 
+                            // Unfurl forever?
+                            // Add random gibberish?
+                            if (Math.random() > 0.5) this.renderedText += zalgo(".", 2);
+                            this.lastDistance = totalDistance;
                         }
-                    });
+                    }
+                    
+                    // Update DOM
+                    // Apply Zalgo corruption to the WHOLE string randomly? expensive.
+                    // Just set text.
+                    this.output.innerText = this.renderedText;
+                    
+                    // Fade out old text? "Unspooling" usually means length grows.
+                    // Limit length to last 100 chars?
+                    if (this.renderedText.length > 200) {
+                        this.renderedText = "..." + this.renderedText.substring(this.renderedText.length - 150);
+                    }
                 }
             }
 
             // Init
             document.querySelectorAll('.da-choice-box').forEach(el => {
                 let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
-                new WordStream(el, type);
+                new UnfurlConsole(el, type);
             });
         })();
 </script>
