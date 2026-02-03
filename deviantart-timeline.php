@@ -1001,296 +1001,85 @@ function da_landing_shortcode($atts)
                 return col;
             }
 
-                        // --- MODE 3: ZDZISLAW (Emanating Ooze + Eerie Morphs) ---
+                                                // --- MODE 3: ZDZISLAW (Mega-Titan v4.64) ---
             float smax(float a, float b, float k) {
                 return -smin(-a, -b, k);
             }
 
             vec3 getZdzislaw(vec2 uv, float t) {
                 vec2 p = uv; 
-                p.x = abs(p.x); // Symmetry
+                p.x = abs(p.x); 
                 
-                // Time vars
-                float tMorph = t * 0.15; // Slow shape shift
-                float tFlow  = t * 0.2;  // Flow speed
+                float tMorph = t * 0.12; 
+                float tFlow  = t * 0.18;  
 
                 // 1. MORPHING STATES
-                // Blend between 2 distinct "nightmare" shapes
-                float morph = 0.5 + 0.5 * sin(tMorph); // 0.0 to 1.0
+                float morph = 0.5 + 0.5 * sin(tMorph); 
 
-                // SHAPE A: "The Ribbed Hive" (Bone Stack + Holes)
-                // INCREASED MASS: 0.25 -> 0.32
-                float dA = length(p - vec2(0.0, 0.2)) - 0.32;
+                // SHAPE A: "The Ribbed Hive" (MEGA SCALE)
+                // Radius 0.32 -> 0.45
+                float dA = length(p - vec2(0.0, 0.25)) - 0.45;
                 for(int i=1; i<=3; i++) {
                     float fi = float(i);
-                    vec2 pos = vec2(0.12, -0.1 - 0.22*fi);
-                    // INCREASED MASS: 0.12 -> 0.16
-                    float rib = length(p - pos) - (0.16 - 0.02*fi);
-                    dA = smin(dA, rib, 0.25); // Thicker blend
+                    vec2 pos = vec2(0.18, -0.15 - 0.28*fi); // Wider stance
+                    // Radius 0.16 -> 0.24
+                    float rib = length(p - pos) - (0.24 - 0.03*fi);
+                    dA = smin(dA, rib, 0.3); // Smoother blend
                 }
-                // Add porous holes to Shape A (larger holes to match scale)
-                float pores = sin(p.x*15.0)*sin(p.y*15.0);
-                dA += pores * 0.025;
+                float pores = sin(p.x*12.0)*sin(p.y*12.0);
+                dA += pores * 0.03;
 
-                // SHAPE B: "The Faceless" (Elongated + Hollow Chest)
-                // INCREASED MASS: Width 0.12 -> 0.16, Height 0.55 -> 0.65
-                float box = length(max(abs(p - vec2(0.0, -0.1))-vec2(0.16, 0.65),0.0)); 
-                float dB = box + min(max(abs(p.x)-0.16, abs(p.y+0.1)-0.65), 0.0); 
+                // SHAPE B: "The Faceless" (MEGA SCALE)
+                // Width 0.16 -> 0.25, Height 0.65 -> 0.85
+                float box = length(max(abs(p - vec2(0.0, -0.15))-vec2(0.25, 0.85),0.0)); 
+                float dB = box + min(max(abs(p.x)-0.25, abs(p.y+0.15)-0.85), 0.0); 
                 
-                // Carve out a huge chest cavity
-                float cavity = length(p - vec2(0.0, -0.2)) - 0.3; // Larger cavity
-                dB = smax(dB, -cavity, 0.15); 
-                // Shoulders
-                // INCREASED MASS: 0.15 -> 0.20
-                float shoulders = length(p - vec2(0.40, 0.25)) - 0.20;
-                dB = smin(dB, shoulders, 0.25);
+                float cavity = length(p - vec2(0.0, -0.2)) - 0.4; // Huge cavity
+                dB = smax(dB, -cavity, 0.2); 
+                
+                // Shoulders: 0.20 -> 0.35
+                float shoulders = length(p - vec2(0.55, 0.35)) - 0.35;
+                dB = smin(dB, shoulders, 0.3);
 
-                // BLEND Shapes
+                // BLEND
                 float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
 
-                // 2. SURFACE DETAILS (The "Eerie" Texture)
-                float boneNoise = fbm(p * 4.0 + tMorph*0.5); // Larger noise details
-                d += boneNoise * 0.05; // Distort surface
+                // 2. SURFACE DETAILS
+                float boneNoise = fbm(p * 3.5 + tMorph*0.4); 
+                d += boneNoise * 0.05; 
 
-                // 3. EMANATING OOZE (Melting OUT from the form)
+                // 3. EMANATING OOZE (Unbound)
                 float r = length(uv);
                 float a = atan(uv.y, uv.x);
                 
-                // Flow moves OUT from center and DOWN
-                float flowPhase = tFlow - d * 2.5; // Stronger surface connection
+                float flowPhase = tFlow - d * 2.0; 
+                float strands = noise(vec2(a * 3.0 + p.x, r * 2.0 - flowPhase * 1.5));
+                strands = smoothstep(0.4, 0.6, strands);
                 
-                // Thicker strands
-                float strands = noise(vec2(a * 3.5 + p.x*1.5, r * 2.5 - flowPhase * 2.0));
-                
-                // Sharpen strands
-                strands = smoothstep(0.4, 0.7, strands);
-                
-                // Masking (Wider emanation field)
-                float emanate = smoothstep(0.15, -0.25, d);
-                emanate *= smoothstep(1.8, 0.5, r);
+                float emanate = smoothstep(0.2, -0.3, d);
+                // MASK EXTENSION: 1.8 -> 3.0 (Effectively infinite/corners)
+                emanate *= smoothstep(3.0, 0.4, r); 
                 
                 float oozeVis = strands * emanate;
 
                 // 4. COMPOSITE
                 float bodyMask = smoothstep(0.01, -0.01, d);
+                float gloom = smoothstep(0.35, 0.65, boneNoise);
                 
-                // Inner "Gloom"
-                float gloom = smoothstep(0.3, 0.6, boneNoise);
-                
-                // Colors
                 vec3 c_bone  = vec3(0.55, 0.53, 0.48);
                 vec3 c_void  = vec3(0.02, 0.02, 0.03);
                 vec3 c_ooze  = vec3(0.60, 0.50, 0.40); 
                 
-                // Body Color
-                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.8);
-                bodyCol *= smoothstep(-0.9, 0.6, p.y); 
+                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.85);
+                bodyCol *= smoothstep(-1.2, 0.8, p.y); 
 
                 vec3 col = vec3(0.0);
-                
-                // Draw Ooze
-                col += c_ooze * oozeVis * 0.6; // More opaque ooze
-                
-                // Draw Body
+                col += c_ooze * oozeVis * 0.65; 
                 col = mix(col, bodyCol, bodyMask);
                 
-                // Draw "Emanating Fog"
-                float fog = smoothstep(0.6, 0.0, d) * fbm(p*1.5 - tFlow);
-                col += vec3(0.2, 0.18, 0.15) * fog * 0.5;
-
-                return col;
-            }
-
-
-            void main() { vUv = position; gl_Position = vec4(position, 0.0, 1.0); }
-                        </script>
-    <script id="fs" type="x-shader/x-fragment">
-                            precision mediump float; uniform float uTime; uniform vec2 uResolution; uniform vec2 uMouse; uniform float uMode;
-        
-                            // COMMON UTILS
-                            mat2 rot(float a) { float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
-                            float random(in vec2 st) { return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123); }
-                            float noise(in vec2 st) {
-                                vec2 i=floor(st); vec2 f=fract(st);
-                                float a=random(i); float b=random(i+vec2(1,0)); float c=random(i+vec2(0,1)); float d=random(i+vec2(1,1));
-                                vec2 u=f*f*(3.0-2.0*f);
-                                return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;
-                            }
-                            #define OCTAVES 5
-                            float fbm(in vec2 st) {
-                                float v=0.0; float a=0.5; mat2 m=rot(0.5);
-                                for(int i=0; i<OCTAVES; i++){ float n = abs(noise(st)*2.0-1.0); n = 1.0 - n; n = n*n; v+=a*n; st=m*st*2.1; a*=0.45; }
-                                return v;
-                            }
-
-                            // --- MODE 0: SMOKE (Original) ---
-                            vec3 getSmoke(vec2 uv, float t, float w) {
-                                vec2 p = uv * 1.6;
-                                vec2 q, r;
-                                q.x = fbm(p); q.y = fbm(p+vec2(5.2,1.3));
-                                r.x = fbm(p+4.0*q*w+vec2(1.7,9.2)+0.15*t);
-                                r.y = fbm(p+4.0*q*w+vec2(8.3,2.8)+0.126*t);
-                                float f = fbm(p+4.0*r+vec2(0.0,-0.4*t));
-                                float ink = f * length(r);
-                                ink = pow(ink, 1.5) * 2.5;
-            
-                                float dist = length(uv);
-                                ink *= smoothstep(1.8, 0.2, dist); // Mask
-            
-                                vec3 col = vec3(ink * 0.95);
-                                return mix(vec3(0.02), vec3(0.95), ink);
-                            }
-
-                            // --- MODE 1: BEKSINSKI (Decay) ---
-                            vec3 getBeksinski(vec2 uv, float t, float w) {
-                                vec2 p = uv * 1.2;
-                                float slowT = t * 0.25; // Slower
-                                vec2 q, r;
-                                q.x = fbm(p); q.y = fbm(p+vec2(5.2,1.3));
-                                r.x = fbm(p+4.0*q*w+vec2(1.7,9.2)+0.15*slowT);
-                                r.y = fbm(p+4.0*q*w+vec2(8.3,2.8)+0.126*slowT);
-                                float f = fbm(p+4.0*r+vec2(0.0,-0.4*slowT));
-            
-                                float ink = f * length(r);
-                                ink = pow(ink, 1.2) * 3.5; // High contrast
-            
-                                float dist = length(uv);
-                                ink *= smoothstep(1.8, 0.2, dist);
-            
-                                // Rust/Bone Palette
-                                vec3 c_void = vec3(0.02, 0.0, 0.0);
-                                vec3 c_rust = vec3(0.45, 0.15, 0.05);
-                                vec3 c_bone = vec3(0.70, 0.65, 0.55);
-            
-                                vec3 col = mix(c_void, c_rust, smoothstep(0.0, 0.4, ink));
-                                col = mix(col, c_bone, smoothstep(0.3, 1.0, ink));
-                                return col * smoothstep(1.5, 0.5, dist); // Vignette
-                            }
-
-            // Helper: Smooth Min for organic blending
-            float smin(float a, float b, float k) {
-                float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
-                return mix(b, a, h) - k*h*(1.0-h);
-            }
-
-            // --- MODE 2: VOID SORT (Original Inward) ---
-            vec3 getVoid(vec2 uv, float t) {
-                vec2 p = uv; p.x = abs(p.x);
-                float flow = t * 0.2;
-                float scan = noise(vec2(p.x * 2.0 + flow, p.y * 100.0)); 
-                float voidDist = length(p - vec2(0.0, 0.1)) - 0.3; 
-                voidDist += noise(p * 5.0 + t*0.1) * 0.1; 
-                float pileUp = smoothstep(0.1, 0.0, voidDist); 
-                float streams = smoothstep(0.4, 0.6, scan);
-                streams *= smoothstep(0.0, 0.2, voidDist); 
-                streams *= smoothstep(1.0, 0.0, p.x); 
-                float edge = smoothstep(0.05, 0.0, abs(voidDist));
-                vec3 col = vec3(0.0); 
-                col += vec3(streams) * 0.8; 
-                col += vec3(edge) * 0.5; 
-                return col;
-            }
-
-            // --- MODE 3: ZDZISLAW (Emanating Ooze + Eerie Morphs) ---
-            float smax(float a, float b, float k) {
-                return -smin(-a, -b, k);
-            }
-
-            vec3 getZdzislaw(vec2 uv, float t) {
-                vec2 p = uv; 
-                p.x = abs(p.x); // Symmetry
-                
-                // Time vars
-                float tMorph = t * 0.15; // Slow shape shift
-                float tFlow  = t * 0.2;  // Flow speed
-
-                // 1. MORPHING STATES
-                // Blend between 2 distinct "nightmare" shapes
-                float morph = 0.5 + 0.5 * sin(tMorph); // 0.0 to 1.0
-
-                // SHAPE A: "The Ribbed Hive" (Bone Stack + Holes)
-                float dA = length(p - vec2(0.0, 0.2)) - 0.25;
-                for(int i=1; i<=3; i++) {
-                    float fi = float(i);
-                    vec2 pos = vec2(0.12, -0.1 - 0.22*fi);
-                    float rib = length(p - pos) - (0.12 - 0.02*fi);
-                    dA = smin(dA, rib, 0.2);
-                }
-                // Add porous holes to Shape A
-                float pores = sin(p.x*20.0)*sin(p.y*20.0);
-                dA += pores * 0.02;
-
-                // SHAPE B: "The Faceless" (Elongated + Hollow Chest)
-                float box = length(max(abs(p - vec2(0.0, -0.1))-vec2(0.12, 0.55),0.0)); 
-                float dB = box + min(max(abs(p.x)-0.12, abs(p.y+0.1)-0.55), 0.0); // sdBox manual
-                
-                // Carve out a huge chest cavity
-                float cavity = length(p - vec2(0.0, -0.2)) - 0.25;
-                dB = smax(dB, -cavity, 0.15); 
-                // Shoulders
-                float shoulders = length(p - vec2(0.35, 0.25)) - 0.15;
-                dB = smin(dB, shoulders, 0.2);
-
-                // BLEND Shapes
-                float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
-
-                // 2. SURFACE DETAILS (The "Eerie" Texture)
-                float boneNoise = fbm(p * 5.0 + tMorph*0.5);
-                d += boneNoise * 0.05; // Distort surface
-
-                // 3. EMANATING OOZE (Melting OUT from the form)
-                // Key: Use 'd' to distort the flow coordinate.
-                // Things closer to surface move differently.
-                
-                // Radial distance and Angle
-                float r = length(uv);
-                float a = atan(uv.y, uv.x);
-                
-                // Flow moves OUT from center and DOWN
-                // We add 'd' to the time offset -> The flow is phased by distance from body
-                float flowPhase = tFlow - d * 2.0; 
-                
-                // Generate strands relative to surface
-                float strands = noise(vec2(a * 4.0 + p.x*2.0, r * 3.0 - flowPhase * 2.0));
-                
-                // Sharpen strands
-                strands = smoothstep(0.4, 0.7, strands);
-                
-                // MASKING:
-                // Emanate mask: Visible near the surface (d near 0) and slightly outside
-                float emanate = smoothstep(0.1, -0.2, d);
-                // Also fade out far away
-                emanate *= smoothstep(1.5, 0.5, r);
-                
-                float oozeVis = strands * emanate;
-
-                // 4. COMPOSITE
-                float bodyMask = smoothstep(0.01, -0.01, d);
-                
-                // Inner "Gloom"
-                float gloom = smoothstep(0.3, 0.6, boneNoise);
-                
-                // Colors
-                vec3 c_bone  = vec3(0.55, 0.53, 0.48);
-                vec3 c_void  = vec3(0.02, 0.02, 0.03);
-                vec3 c_ooze  = vec3(0.60, 0.50, 0.40); // Slightly glowing ooze?
-                
-                // Body Color
-                vec3 bodyCol = mix(c_bone, c_void, gloom * 0.8);
-                // Darken bottom of body
-                bodyCol *= smoothstep(-0.8, 0.5, p.y); 
-
-                vec3 col = vec3(0.0);
-                
-                // Draw Ooze (Behind/Around body)
-                col += c_ooze * oozeVis * 0.5;
-                
-                // Draw Body
-                col = mix(col, bodyCol, bodyMask);
-                
-                // Draw "Emanating Fog" (Volumetric light effect)
-                float fog = smoothstep(0.5, 0.0, d) * fbm(p*2.0 - tFlow);
-                col += vec3(0.2, 0.18, 0.15) * fog * 0.4;
+                // Fog fills the screen
+                float fog = smoothstep(0.7, -0.2, d) * fbm(p*1.2 - tFlow);
+                col += vec3(0.2, 0.18, 0.15) * fog * 0.55;
 
                 return col;
             }
@@ -1316,7 +1105,7 @@ function da_landing_shortcode($atts)
 
                 gl_FragColor = vec4(col, 1.0);
             }
-                        </script>
+        </script>
 
     <!-- SAFE MODE JS: UI First, Then WebGL -->
     <script data-cfasync="false">
