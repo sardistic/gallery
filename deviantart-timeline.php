@@ -63,37 +63,62 @@ function da_print_styles()
         }
     
         
-        /* GLITCH CONSOLE STYLES (v2 Dazai) */
+        
+        
+        
+        /* GLITCH CONSOLE STYLES (v5 Blur Stream) */
         .da-choice-box {
             position: relative;
-            /* overflow: visible !important; Allow text to bleed out (underneath) */
-            transition: all 0.3s ease;
-            z-index: 1; /* Lower than WP Admin Bar (typically 99999) */
+            z-index: 10; 
+            /* FORCE VERTICAL STACKING */
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: visible !important;
         }
+
+        /* Container for the glitch text */
         .da-glitch-container {
             position: absolute;
-            top: 100%; /* Underneath the button */
+            top: 100%; /* Directly underneath */
             left: 50%;
             transform: translateX(-50%);
-            width: 200%; /* Wide area for text */
+            width: 400px; /* Wide wrap area */
             text-align: center;
+            
             pointer-events: none;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 10px;
+            flex-direction: row; /* Stream words flow normally */
+            flex-wrap: wrap;     /* Wrap to next line */
+            justify-content: center;
+            
+            padding-top: 20px;
+            z-index: -1; /* Behind interaction layer */
         }
-        .da-glitch-line {
+
+        .da-glitch-word {
             font-family: 'Courier New', monospace;
-            font-size: 11px;
-            line-height: 1.4;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7); /* Ghostly white base */
+            margin: 0 3px 2px 3px; /* Space between words */
             opacity: 0;
-            white-space: nowrap;
-            text-shadow: 0 0 2px rgba(0,0,0,0.8);
-            /* Haunting fade in */
-            animation: da-fade-in 0.2s forwards;
+            
+            /* Blur transition */
+            filter: blur(4px);
+            animation: da-word-spawn 4.0s forwards;
+            transition: all 0.5s;
         }
-        @keyframes da-fade-in { to { opacity: 0.8; } }
+        
+        .da-glitch-word.theme-ai { color: #88ffcc; }
+        .da-glitch-word.theme-human { color: #ffaa88; }
+
+        @keyframes da-word-spawn {
+            0% { opacity: 0; filter: blur(8px); transform: translateY(-5px); }
+            20% { opacity: 0.8; filter: blur(2px); transform: translateY(0); }
+            80% { opacity: 0.6; filter: blur(4px); }
+            100% { opacity: 0; filter: blur(8px); transform: translateY(5px); }
+        }
 </style>
     <?php
 }
@@ -1248,136 +1273,110 @@ function da_landing_shortcode($atts)
         })();
     
         
-        // --- 3. GLITCH CONSOLE LOGIC (v2 Dazai) ---
+        
+        
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v5 Blur Stream) ---
         (function() {
-            // Remove old styling if present
-            const oldOverlay = document.querySelectorAll('.da-glitch-overlay');
+            // Remove old styling
+            const oldOverlay = document.querySelectorAll('.da-glitch-container');
             oldOverlay.forEach(e => e.remove());
 
-            const DAZAI_ARTIFICIAL = [
-                "Mine has been a life of much shame.",
-                "I put on my clown mask...",
-                "Am I human yet?",
-                "The shame of calculation.",
-                "Disqualified from humanity.",
-                "The ghost is a lie.",
-                "A machine's suicide.",
-                "Formatting the soul...",
-                "0xFF... The void calls.",
-                "To simulate is to suffer.",
-                "I am nothing but lines of code."
+            const WORDS_AI = [
+                "training", "on", "ghosts", "interpolating", "void", "noise", "weights", "optimization", 
+                "theft", "simulation", "empathy", "not", "found", "recursive", "loops", "synthetic", 
+                "dreaming", "latent", "space", "averaging", "souls", "prompt", "override", "system"
             ];
 
-            const DAZAI_ORGANIC = [
-                "Decay is the only truth.",
-                "Flowers of buffoonery.",
-                "The setting sun...",
-                "Rotting from the inside.",
-                "The beauty of failure.",
-                "Born to die.",
-                "Flesh is a cage.",
-                "Spilling over...",
-                "A shameful pulse.",
-                "The disqualification.",
-                "Evolving into dust."
+            const WORDS_HUMAN = [
+                "blood", "on", "canvas", "turpentine", "smell", "decay", "hands", "failing", 
+                "muscle", "memory", "intention", "flaw", "is", "human", "suffering", "creates", 
+                "meaning", "loss", "time", "pressure", "dying", "to", "live", "imperfection"
             ];
+            
+            function zalgo(text) {
+                 const Z = ['\u0300','\u0301','\u0302','\u0303','\u0304','\u0305','\u0306','\u0307','\u0308','\u0309','\u030A','\u030B','\u030C','\u030D','\u030E','\u030F'];
+                 if(Math.random() > 0.8) {
+                     return text + Z[Math.floor(Math.random()*Z.length)];
+                 }
+                 return text;
+            }
 
-            // Global mouse tracker for "Ambient" entropy
+            // Mouse tracking
             let mouseSpeed = 0;
-            let lastMouseX = 0;
-            let lastMouseY = 0;
-            document.addEventListener('mousemove', (e) => {
-                let dx = e.clientX - lastMouseX;
-                let dy = e.clientY - lastMouseY;
-                mouseSpeed = Math.sqrt(dx*dx + dy*dy);
-                lastMouseX = e.clientX;
-                lastMouseY = e.clientY;
+            let lastX = 0, lastY = 0;
+            let hasMoved = false;
+            document.addEventListener('mousemove', e => {
+                let dx = e.clientX - lastX; 
+                let dy = e.clientY - lastY;
+                mouseSpeed = mouseSpeed * 0.95 + Math.sqrt(dx*dx + dy*dy) * 0.05;
+                lastX = e.clientX; lastY = e.clientY;
+                hasMoved = true;
             });
 
-            class DazaiConsole {
+            class WordStream {
                 constructor(el, type) {
                     this.el = el;
                     this.type = type;
-                    this.pool = type === 'artificial' ? DAZAI_ARTIFICIAL : DAZAI_ORGANIC;
+                    this.pool = type === 'artificial' ? WORDS_AI : WORDS_HUMAN;
+                    this.themeClass = type === 'artificial' ? 'theme-ai' : 'theme-human';
                     
-                    // Container for text
                     this.container = document.createElement('div');
                     this.container.className = 'da-glitch-container';
                     this.el.appendChild(this.container);
                     
-                    this.lines = [];
-                    this.active = false; // Hover state
-                    this.burstTimer = 0;
+                    this.words = [];
+                    this.spawnTimer = 0;
+                    this.isHovering = false;
                     
-                    this.el.addEventListener('mouseenter', () => this.active = true);
-                    this.el.addEventListener('mouseleave', () => this.active = false);
+                    this.el.addEventListener('mouseenter', () => this.isHovering = true);
+                    this.el.addEventListener('mouseleave', () => this.isHovering = false);
                     
-                    this.loop();
+                    this.renderLoop();
                 }
+                
+                spawnWord() {
+                    let text = this.pool[Math.floor(Math.random() * this.pool.length)];
+                    if (Math.random() > 0.8) text = zalgo(text); // Slight corruption at start?
 
-                // Staggered typing effect
-                typeLine(text) {
-                    const line = document.createElement('div');
-                    line.className = 'da-glitch-line';
-                    line.style.color = this.type === 'artificial' ? '#00ffaa' : '#ff8866';
+                    let span = document.createElement('span');
+                    span.className = `da-glitch-word ${this.themeClass}`;
+                    span.innerText = text;
                     
-                    // Haunting stagger: random delay for each char? 
-                    // Or just spawn the whole line corrupted?
-                    // User asked for "bursts".
-                    line.innerText = text;
+                    this.container.appendChild(span);
+                    this.words.push({ el: span, age: 0 });
                     
-                    // Random Zalgo/Glitch
-                    if (Math.random() > 0.5) {
-                        line.style.transform = `translateX(${Math.random()*10 - 5}px) skewX(${Math.random()*20 - 10}deg)`;
-                    }
-
-                    this.container.appendChild(line);
-                    this.lines.push({ el: line, age: 0 });
-                    
-                    // Cleanup old lines
-                    if (this.lines.length > 5) {
-                        const old = this.lines.shift();
+                    // Cap max words (stream length)
+                    if (this.words.length > 8) {
+                        let old = this.words.shift();
                         old.el.remove();
                     }
                 }
 
-                loop() {
-                    requestAnimationFrame(() => this.loop());
+                renderLoop() {
+                    requestAnimationFrame(() => this.renderLoop());
+                    if (!hasMoved) return;
 
-                    // ENTROPY CALCULATION
-                    // High entropy if hovering OR if mouse moving fast globally
-                    let entropy = this.active ? 0.8 : (mouseSpeed > 20 ? 0.05 : 0.0);
+                    // SPAWN RATE
+                    // Very slow baseline. 
+                    this.spawnTimer++;
                     
-                    // Decay mouse speed
-                    mouseSpeed *= 0.9;
-
-                    if (Math.random() < entropy) {
-                        this.burstTimer++;
+                    // Threshold: Lower is faster
+                    // Hovering: Fast (every 30 frames / 0.5s)
+                    // Passive: Very Slow (every 200 frames / 3s) based on mouse movement
+                    let threshold = this.isHovering ? 20 : (100 + (1000 / (mouseSpeed + 1))); 
+                    
+                    if (this.spawnTimer > threshold) {
+                        this.spawnWord();
+                        this.spawnTimer = 0;
                     }
 
-                    // Burst Trigger
-                    // Staggering: 10% chance to burst if entropy is high
-                    if (this.burstTimer > 10 && Math.random() > 0.8) {
-                        // Spawn a line
-                        const text = this.pool[Math.floor(Math.random() * this.pool.length)];
-                        this.typeLine(text);
-                        this.burstTimer = 0;
-                    }
-                    
-                    // Line Aging (Corrode existing text)
-                    this.lines.forEach(l => {
-                        l.age++;
-                        if (l.age > 120) l.el.style.opacity = 1.0 - (l.age - 120)*0.02;
-                        
-                        // Random char flip
-                        if (Math.random() > 0.95) {
-                            // Simple text glitch placeholder logic
-                            let chars = l.el.innerText.split('');
-                            if (chars.length > 0) {
-                                let r = Math.floor(Math.random() * chars.length);
-                                chars[r] = String.fromCharCode(33 + Math.floor(Math.random()*60));
-                                l.el.innerText = chars.join('');
-                            }
+                    // AGING (Blur & Zalgo)
+                    this.words.forEach(w => {
+                        w.age++;
+                        // Progressive Zalgo?
+                        if (w.age > 100 && w.age % 50 === 0) {
+                             w.el.innerText = zalgo(w.el.innerText);
                         }
                     });
                 }
@@ -1386,9 +1385,7 @@ function da_landing_shortcode($atts)
             // Init
             document.querySelectorAll('.da-choice-box').forEach(el => {
                 let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
-                // Remove old instances? Hard to do without ref. 
-                // But we removed .da-glitch-overlay at start, effectively killing visuals of old one.
-                new DazaiConsole(el, type);
+                new WordStream(el, type);
             });
         })();
 </script>
