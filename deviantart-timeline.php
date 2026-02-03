@@ -61,7 +61,40 @@ function da_print_styles()
             overflow: hidden;
             background: #000;
         }
-    </style>
+    
+        
+        /* GLITCH CONSOLE STYLES (v2 Dazai) */
+        .da-choice-box {
+            position: relative;
+            /* overflow: visible !important; Allow text to bleed out (underneath) */
+            transition: all 0.3s ease;
+            z-index: 1; /* Lower than WP Admin Bar (typically 99999) */
+        }
+        .da-glitch-container {
+            position: absolute;
+            top: 100%; /* Underneath the button */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200%; /* Wide area for text */
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+        }
+        .da-glitch-line {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            opacity: 0;
+            white-space: nowrap;
+            text-shadow: 0 0 2px rgba(0,0,0,0.8);
+            /* Haunting fade in */
+            animation: da-fade-in 0.2s forwards;
+        }
+        @keyframes da-fade-in { to { opacity: 0.8; } }
+</style>
     <?php
 }
 
@@ -1213,7 +1246,152 @@ function da_landing_shortcode($atts)
                 });
             });
         })();
-    </script>
+    
+        
+        // --- 3. GLITCH CONSOLE LOGIC (v2 Dazai) ---
+        (function() {
+            // Remove old styling if present
+            const oldOverlay = document.querySelectorAll('.da-glitch-overlay');
+            oldOverlay.forEach(e => e.remove());
+
+            const DAZAI_ARTIFICIAL = [
+                "Mine has been a life of much shame.",
+                "I put on my clown mask...",
+                "Am I human yet?",
+                "The shame of calculation.",
+                "Disqualified from humanity.",
+                "The ghost is a lie.",
+                "A machine's suicide.",
+                "Formatting the soul...",
+                "0xFF... The void calls.",
+                "To simulate is to suffer.",
+                "I am nothing but lines of code."
+            ];
+
+            const DAZAI_ORGANIC = [
+                "Decay is the only truth.",
+                "Flowers of buffoonery.",
+                "The setting sun...",
+                "Rotting from the inside.",
+                "The beauty of failure.",
+                "Born to die.",
+                "Flesh is a cage.",
+                "Spilling over...",
+                "A shameful pulse.",
+                "The disqualification.",
+                "Evolving into dust."
+            ];
+
+            // Global mouse tracker for "Ambient" entropy
+            let mouseSpeed = 0;
+            let lastMouseX = 0;
+            let lastMouseY = 0;
+            document.addEventListener('mousemove', (e) => {
+                let dx = e.clientX - lastMouseX;
+                let dy = e.clientY - lastMouseY;
+                mouseSpeed = Math.sqrt(dx*dx + dy*dy);
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+
+            class DazaiConsole {
+                constructor(el, type) {
+                    this.el = el;
+                    this.type = type;
+                    this.pool = type === 'artificial' ? DAZAI_ARTIFICIAL : DAZAI_ORGANIC;
+                    
+                    // Container for text
+                    this.container = document.createElement('div');
+                    this.container.className = 'da-glitch-container';
+                    this.el.appendChild(this.container);
+                    
+                    this.lines = [];
+                    this.active = false; // Hover state
+                    this.burstTimer = 0;
+                    
+                    this.el.addEventListener('mouseenter', () => this.active = true);
+                    this.el.addEventListener('mouseleave', () => this.active = false);
+                    
+                    this.loop();
+                }
+
+                // Staggered typing effect
+                typeLine(text) {
+                    const line = document.createElement('div');
+                    line.className = 'da-glitch-line';
+                    line.style.color = this.type === 'artificial' ? '#00ffaa' : '#ff8866';
+                    
+                    // Haunting stagger: random delay for each char? 
+                    // Or just spawn the whole line corrupted?
+                    // User asked for "bursts".
+                    line.innerText = text;
+                    
+                    // Random Zalgo/Glitch
+                    if (Math.random() > 0.5) {
+                        line.style.transform = `translateX(${Math.random()*10 - 5}px) skewX(${Math.random()*20 - 10}deg)`;
+                    }
+
+                    this.container.appendChild(line);
+                    this.lines.push({ el: line, age: 0 });
+                    
+                    // Cleanup old lines
+                    if (this.lines.length > 5) {
+                        const old = this.lines.shift();
+                        old.el.remove();
+                    }
+                }
+
+                loop() {
+                    requestAnimationFrame(() => this.loop());
+
+                    // ENTROPY CALCULATION
+                    // High entropy if hovering OR if mouse moving fast globally
+                    let entropy = this.active ? 0.8 : (mouseSpeed > 20 ? 0.05 : 0.0);
+                    
+                    // Decay mouse speed
+                    mouseSpeed *= 0.9;
+
+                    if (Math.random() < entropy) {
+                        this.burstTimer++;
+                    }
+
+                    // Burst Trigger
+                    // Staggering: 10% chance to burst if entropy is high
+                    if (this.burstTimer > 10 && Math.random() > 0.8) {
+                        // Spawn a line
+                        const text = this.pool[Math.floor(Math.random() * this.pool.length)];
+                        this.typeLine(text);
+                        this.burstTimer = 0;
+                    }
+                    
+                    // Line Aging (Corrode existing text)
+                    this.lines.forEach(l => {
+                        l.age++;
+                        if (l.age > 120) l.el.style.opacity = 1.0 - (l.age - 120)*0.02;
+                        
+                        // Random char flip
+                        if (Math.random() > 0.95) {
+                            // Simple text glitch placeholder logic
+                            let chars = l.el.innerText.split('');
+                            if (chars.length > 0) {
+                                let r = Math.floor(Math.random() * chars.length);
+                                chars[r] = String.fromCharCode(33 + Math.floor(Math.random()*60));
+                                l.el.innerText = chars.join('');
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Init
+            document.querySelectorAll('.da-choice-box').forEach(el => {
+                let type = el.getAttribute('href').includes('ai') ? 'artificial' : 'organic';
+                // Remove old instances? Hard to do without ref. 
+                // But we removed .da-glitch-overlay at start, effectively killing visuals of old one.
+                new DazaiConsole(el, type);
+            });
+        })();
+</script>
     <?php
     return ob_get_clean();
 }
