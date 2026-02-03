@@ -1001,100 +1001,110 @@ function da_landing_shortcode($atts)
                 return col;
             }
 
-                                                            // --- MODE 3: ZDZISLAW (Gruesome v4.65) ---
-            float smax(float a, float b, float k) {
-                return -smin(-a, -b, k);
+                                                                        // --- MODE 3: ZDZISLAW (Visceral Meltdown v4.66) ---
+            float smax(float a, float b, float k) { return -smin(-a, -b, k); }
+            
+            // Voronoi-ish cellular noise for blisters
+            float cellular(vec2 p) {
+                vec2 n = floor(p);
+                vec2 f = fract(p);
+                float min_dist = 1.0;
+                for(int y=-1; y<=1; y++) {
+                    for(int x=-1; x<=1; x++) {
+                        vec2 neighbor = vec2(float(x),float(y));
+                        vec2 point = random(n + neighbor);
+                        point = 0.5 + 0.5*sin(6.2831*point); // Animate?
+                        vec2 diff = neighbor + point - f;
+                        float dist = length(diff);
+                        min_dist = min(min_dist, dist);
+                    }
+                }
+                return min_dist;
             }
 
             vec3 getZdzislaw(vec2 uv, float t) {
                 vec2 p = uv; 
                 p.x = abs(p.x); 
                 
-                float tMorph = t * 0.1; 
-                float tFlow  = t * 0.15;  
+                // 1. HEAVY MELT (Domain Warping)
+                // We distort the P coordinates BEFORE calculating SDFs.
+                // This drags the whole shape downwards like wax.
+                float meltNoise = fbm(p * 2.0 + vec2(0.0, t * 0.2));
+                float meltStr = 0.15; // Strength of melt
+                p.y -= meltStr * meltNoise;
+                p.y += 0.05 * sin(p.x * 5.0 + t); // Wavy distortion
 
-                // 1. MORPHING STATES
-                float morph = 0.5 + 0.5 * sin(tMorph); 
+                // 2. DYNAMIC SPASMS
+                // Occasional twitching
+                float twitch = smoothstep(0.8, 1.0, sin(t * 3.0)) * sin(t * 20.0) * 0.02;
+                p.x += twitch;
 
-                // SHAPE A: "The Ribbed Hive"
-                // Radius 0.45
-                float dA = length(p - vec2(0.0, 0.25)) - 0.42; // Slightly smaller to reveal ribs
-                for(int i=1; i<=4; i++) { // More ribs (4)
-                    float fi = float(i);
-                    vec2 pos = vec2(0.18, -0.15 - 0.25*fi); 
-                    // Sharper ribs
-                    float rib = length(p - pos) - (0.24 - 0.04*fi);
-                    dA = smin(dA, rib, 0.15); // Tighter blend (more skeletal)
-                }
-                // Pores (Trypophobia)
-                float pores = sin(p.x*25.0)*sin(p.y*25.0);
-                dA += pores * 0.015;
-
-                // SHAPE B: "The Faceless"
-                float box = length(max(abs(p - vec2(0.0, -0.15))-vec2(0.24, 0.85),0.0)); 
-                float dB = box + min(max(abs(p.x)-0.24, abs(p.y+0.15)-0.85), 0.0); 
+                // 3. SDF STRUCTURE (Mega Scale)
+                float d = 100.0;
                 
-                // Jagged Cavity
-                float cavity = length(p - vec2(0.0, -0.2)) - 0.4; 
-                cavity += 0.05 * sin(p.y * 10.0); // Ribbed cavity
-                dB = smax(dB, -cavity, 0.15); 
+                // Breathing
+                float breath = 0.5 + 0.5*sin(t*0.5);
+
+                // A. The "Hive" Head
+                float head = length(p - vec2(0.0, 0.3)) - 0.45;
+                // Distort head shape
+                head += 0.03 * sin(p.y * 10.0 + t); 
+
+                // B. Ribcage / Torso (Split Open)
+                float torso = length(p - vec2(0.25, -0.3)) - 0.3;
+                torso = smin(torso, length(p - vec2(0.0, -0.5)) - 0.25, 0.2);
                 
-                float shoulders = length(p - vec2(0.55, 0.35)) - 0.35;
-                dB = smin(dB, shoulders, 0.25);
-
-                // BLEND
-                float d = mix(dA, dB, smoothstep(0.1, 0.9, morph));
-
-                // 2. SURFACE DETAILS (Gruesome)
-                // "Peeling Skin" Noise
-                float peel = fbm(p * 8.0 + tMorph*0.2); 
-                // "Veins"
-                float veins = 1.0 - abs(noise(p * 15.0)*2.0-1.0);
+                // Combine
+                d = head;
+                d = smin(d, torso, 0.15);
                 
-                d += peel * 0.04; 
-                d += veins * 0.015;
+                // C. Cavity (The "Rot")
+                // Carve out random holes
+                float holes = fbm(p * 4.0 - t*0.1);
+                d += holes * 0.15; // Displace surface heavily
 
-                // 3. EMANATING OOZE
+                // 4. TEXTURE: BLISTERS & SORES
+                // Use cellular noise inverted for "bubbles"
+                float cells = cellular(p * 8.0);
+                float blisters = smoothstep(0.2, 0.7, cells);
+                
+                // Apply blister displacement
+                d -= blisters * 0.03;
+
+                // 5. COLORS (Gruesome Palette)
+                float mask = smoothstep(0.01, -0.01, d);
+                
+                // Base: Dead Flesh
+                vec3 c_flesh = vec3(0.40, 0.35, 0.30);
+                // Sore: Inflamed Tissue
+                vec3 c_sore  = vec3(0.35, 0.10, 0.05);
+                // Void: Black Rot
+                vec3 c_rot   = vec3(0.05, 0.02, 0.00);
+
+                // Mix based on "Holes" noise
+                vec3 bodyCol = mix(c_flesh, c_sore, holes * 1.5);
+                // Darken deep blisters
+                bodyCol = mix(bodyCol, c_rot, 1.0 - blisters);
+                
+                // "Wet" Specular Highlight (The Ooze)
+                float wet = smoothstep(0.4, 0.45, cells);
+                bodyCol += vec3(0.2) * wet;
+
+                // EMANATING OOZE (Background)
                 float r = length(uv);
                 float a = atan(uv.y, uv.x);
+                float flow = r - t * 0.1;
+                float strands = noise(vec2(a * 5.0, flow * 4.0));
                 
-                float flowPhase = tFlow - d * 2.5; 
-                // Stringy, blood-like strands
-                float strands = noise(vec2(a * 4.0 + p.x*2.0, r * 3.0 - flowPhase * 1.5));
-                strands = smoothstep(0.45, 0.75, strands); // Sharper
+                // Colors for strands
+                vec3 c_strand = vec3(0.25, 0.05, 0.02); // Dried blood
                 
-                float emanate = smoothstep(0.1, -0.3, d);
-                emanate *= smoothstep(3.0, 0.4, r); 
-                
-                float oozeVis = strands * emanate;
-
-                // 4. COMPOSITE
-                float bodyMask = smoothstep(0.005, -0.005, d); // Sharp edge
-                
-                // Rotting Pits
-                float rot = smoothstep(0.4, 0.8, peel);
-                
-                // PALETTE: Sickly
-                vec3 c_bone   = vec3(0.50, 0.48, 0.42); // Old, yellowing bone
-                vec3 c_sore   = vec3(0.35, 0.15, 0.10); // Open sores / raw meat
-                vec3 c_void   = vec3(0.01, 0.00, 0.02); // Deep shadow
-                vec3 c_blood  = vec3(0.30, 0.05, 0.02); // Dried blood (Ooze)
-                
-                // Texturing the body
-                vec3 bodyCol = mix(c_sore, c_bone, veins); // Veins are bone-colored on sore background? Or vice versa.
-                // Actually: Bone base, sores in the noise pits
-                bodyCol = mix(c_bone, c_sore, rot); 
-                
-                // Deep shadows at bottom
-                bodyCol = mix(bodyCol, c_void, smoothstep(-0.5, -1.2, p.y));
-
                 vec3 col = vec3(0.0);
-                col += c_blood * oozeVis * 0.8; // Dark, heavy ooze
-                col = mix(col, bodyCol, bodyMask);
+                col += c_strand * smoothstep(0.4, 0.8, strands) * smoothstep(0.1, -0.5, d);
+                col = mix(col, bodyCol, mask);
                 
-                // Rancid Fog
-                float fog = smoothstep(0.7, -0.2, d) * fbm(p*1.2 - tFlow);
-                col += vec3(0.15, 0.12, 0.08) * fog * 0.6; // Brownish/Green fog
+                // Shadows
+                col *= smoothstep(-1.2, 0.8, p.y); 
 
                 return col;
             }
